@@ -84,8 +84,8 @@ const Index = () => {
       <header className="fixed top-0 inset-x-0 z-50 backdrop-blur-md bg-background/70 border-b border-border/60">
         <div className="container flex items-center justify-between h-20">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-sm border border-gold/50 flex items-center justify-center">
-              <span className="font-display text-gold text-2xl leading-none">М</span>
+            <div className="w-9 h-9 rounded-sm border border-gold/50 flex items-center justify-center overflow-hidden">
+              <img src="https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/bucket/8c435106-11a8-4f69-9bac-e649551a8a4e.png" alt="Логотип" className="w-full h-full object-contain p-0.5" />
             </div>
             <div className="leading-tight">
               <p className="font-display text-lg tracking-wide">Волжская мебельная мануфактура</p>
@@ -108,7 +108,7 @@ const Index = () => {
           <h1 className="animate-fade-in font-display text-6xl md:text-8xl lg:text-9xl leading-[0.9] mb-10" style={{ animationDelay: '0.15s' }}>
             Мягкая и садовая
             <br />
-            <span className="italic text-gold">мебель</span>
+            <span className="not-italic text-gold">мебель</span>
           </h1>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 max-w-5xl">
             <a
@@ -238,7 +238,8 @@ const Index = () => {
             <a className="px-8 py-4 rounded-full bg-gold text-primary-foreground text-sm tracking-widest uppercase hover:opacity-90 transition-opacity">
               Связаться с нами
             </a>
-            <a href="mailto:info@vmm24.com" className="px-8 py-4 rounded-full border border-border text-sm tracking-widest hover:border-gold/60 transition-colors">
+            <a href="mailto:info@vmm24.com" className="flex items-center gap-2 px-8 py-4 rounded-full border border-border text-sm tracking-widest hover:border-gold/60 transition-colors">
+              <Icon name="Mail" size={15} className="text-gold shrink-0" />
               info@vmm24.com
             </a>
           </div>
