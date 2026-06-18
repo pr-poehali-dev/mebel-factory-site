@@ -72,11 +72,13 @@ const PRODUCTS: Product[] = [
 
 const Index = () => {
   const [active, setActive] = useState('all');
+  const [search, setSearch] = useState('');
 
-  const filtered = useMemo(
-    () => (active === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.category === active)),
-    [active]
-  );
+  const filtered = useMemo(() => {
+    const byCategory = active === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.category === active);
+    const q = search.trim().toLowerCase();
+    return q ? byCategory.filter((p) => p.name.toLowerCase().includes(q)) : byCategory;
+  }, [active, search]);
 
   return (
     <div className="min-h-screen bg-background bg-grain text-foreground">
@@ -134,6 +136,18 @@ const Index = () => {
             <p className="text-muted-foreground max-w-xs text-sm">
               Все товары производятся на собственной фабрике полного цикла.
             </p>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-6 max-w-sm">
+            <Icon name="Search" size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Поиск по названию..."
+              className="w-full pl-10 pr-4 py-2.5 text-sm rounded-full border border-border bg-background focus:outline-none focus:border-gold/60 transition-colors"
+            />
           </div>
 
           {/* Filters */}
