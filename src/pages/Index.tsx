@@ -88,8 +88,7 @@ const Index = () => {
               <span className="font-display text-gold text-2xl leading-none">М</span>
             </div>
             <div className="leading-tight">
-              <p className="font-display text-xl tracking-wide">МЕБЕЛЬ</p>
-              <p className="text-[10px] tracking-mega text-muted-foreground uppercase">Фабрика · с 2016</p>
+              <p className="font-display text-lg tracking-wide">Волжская мебельная мануфактура</p>
             </div>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
@@ -104,46 +103,23 @@ const Index = () => {
       <section className="relative pt-44 pb-24 overflow-hidden">
         <div className="container">
           <p className="animate-fade-in text-gold text-xs tracking-mega uppercase mb-8" style={{ animationDelay: '0.05s' }}>
-            Электронный каталог · полный цикл производства
+            Электронный каталог
           </p>
           <h1 className="animate-fade-in font-display text-6xl md:text-8xl lg:text-9xl leading-[0.9] mb-10" style={{ animationDelay: '0.15s' }}>
-            Мебель, рождённая
+            Мягкая и садовая
             <br />
-            <span className="italic text-gold">от первой нити</span>
+            <span className="italic text-gold">мебель</span>
           </h1>
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 max-w-5xl">
-            <p className="animate-fade-in text-lg text-muted-foreground max-w-md" style={{ animationDelay: '0.3s' }}>
-              Мы делаем нить, ткань-рогожку, каркасы и опоры — и собираем готовые
-              изделия. Здесь представлен каталог нашей продукции.
-            </p>
             <a
               href="#catalog"
               className="animate-fade-in group flex items-center gap-3 text-sm tracking-widest uppercase shrink-0"
-              style={{ animationDelay: '0.4s' }}
+              style={{ animationDelay: '0.3s' }}
             >
               <span className="border-b border-gold/40 pb-1 group-hover:border-gold transition-colors">Смотреть каталог</span>
               <Icon name="ArrowDown" size={16} className="text-gold" />
             </a>
           </div>
-        </div>
-
-        {/* Decorative stats */}
-        <div className="container mt-24 grid grid-cols-2 md:grid-cols-4 gap-px bg-border/60 border-y border-border/60">
-          {[
-            { v: '550', l: 'диванов в день' },
-            { v: '10+', l: 'лет на рынке' },
-            { v: '100%', l: 'свой цикл' },
-            { v: '6', l: 'категорий' },
-          ].map((s, i) => (
-            <div
-              key={s.l}
-              className="animate-fade-in bg-background px-6 py-10"
-              style={{ animationDelay: `${0.5 + i * 0.08}s` }}
-            >
-              <p className="font-display text-5xl text-gold mb-2">{s.v}</p>
-              <p className="text-xs tracking-widest uppercase text-muted-foreground">{s.l}</p>
-            </div>
-          ))}
         </div>
       </section>
 
@@ -168,8 +144,8 @@ const Index = () => {
                 onClick={() => setActive(c.id)}
                 className={`px-5 py-2.5 text-sm tracking-wide rounded-full border transition-all duration-300 ${
                   active === c.id
-                    ? 'bg-gold text-primary-foreground border-gold'
-                    : 'border-border text-muted-foreground hover:border-gold/60 hover:text-foreground'
+                    ? 'bg-gold text-white border-gold'
+                    : 'border-border text-foreground hover:border-gold/60 hover:text-foreground'
                 }`}
               >
                 {c.label}
@@ -262,8 +238,8 @@ const Index = () => {
             <a className="px-8 py-4 rounded-full bg-gold text-primary-foreground text-sm tracking-widest uppercase hover:opacity-90 transition-opacity">
               Связаться с нами
             </a>
-            <a className="px-8 py-4 rounded-full border border-border text-sm tracking-widest uppercase hover:border-gold/60 transition-colors">
-              Перейти в магазин
+            <a href="mailto:info@vmm24.com" className="px-8 py-4 rounded-full border border-border text-sm tracking-widest hover:border-gold/60 transition-colors">
+              info@vmm24.com
             </a>
           </div>
         </div>
