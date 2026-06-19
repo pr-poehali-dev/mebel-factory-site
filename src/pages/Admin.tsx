@@ -147,6 +147,15 @@ export default function Admin() {
     loadProducts();
   }
 
+  async function toggleActive(p: Product) {
+    await fetch(`${API}?action=update&id=${p.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+      body: JSON.stringify({ ...p, is_active: !p.is_active }),
+    });
+    loadProducts();
+  }
+
   async function handleCsv(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -190,99 +199,119 @@ export default function Admin() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Управление товарами</h1>
-        <Button variant="outline" size="sm" onClick={() => { sessionStorage.removeItem("admin_token"); setToken(""); }}>
-          <Icon name="LogOut" size={16} />
-          Выйти
-        </Button>
+    <div className="min-h-screen bg-white">
+      {/* Шапка */}
+      <div className="border-b px-6 py-4 flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Управление каталогом</h1>
+        <div className="flex gap-2">
+          <Button onClick={openCreate} className="gap-2">
+            <Icon name="Plus" size={16} />
+            Добавить товар
+          </Button>
+          <Button variant="outline" onClick={() => { sessionStorage.removeItem("admin_token"); setToken(""); }} className="gap-2">
+            <Icon name="LogOut" size={16} />
+            Выйти
+          </Button>
+        </div>
       </div>
 
-      <div className="px-4 py-6 flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <Input placeholder="Поиск..." value={search} onChange={e => setSearch(e.target.value)} className="max-w-xs" />
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => csvRef.current?.click()} disabled={csvLoading}>
-              <Icon name="Upload" size={16} />
-              {csvLoading ? "Загрузка..." : "Импорт CSV"}
-            </Button>
-            <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCsv} />
-            <Button size="sm" onClick={openCreate}>
-              <Icon name="Plus" size={16} />
-              Добавить товар
-            </Button>
+      <div className="px-6 py-5 flex flex-col gap-4">
+        {/* Панель поиска и импорта */}
+        <div className="flex gap-3 items-center">
+          <div className="relative flex-1 max-w-sm">
+            <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Input
+              placeholder="Поиск по названию или категории..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9"
+            />
           </div>
+          <Button variant="outline" size="sm" onClick={() => csvRef.current?.click()} disabled={csvLoading} className="gap-2">
+            <Icon name="Upload" size={16} />
+            {csvLoading ? "Загрузка..." : "Импорт CSV"}
+          </Button>
+          <input ref={csvRef} type="file" accept=".csv" className="hidden" onChange={handleCsv} />
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-700">
-          <b>Колонки CSV:</b> name, category, price, old_price, img, tag, angle_type, fabric, description, specs, colors, images, sku<br />
-          images / colors / fabric — через <code>|</code> &nbsp;·&nbsp; specs — <code>Ключ: Значение</code> через <code>;</code>
-        </div>
-
+        {/* Таблица */}
         {loading ? (
           <div className="text-center py-20 text-gray-400">Загрузка...</div>
         ) : (
-          <div className="bg-white rounded-xl shadow overflow-x-auto">
-            <table className="w-full text-xs whitespace-nowrap">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  {["id","name","category","price","old_price","img","tag","angle_type","fabric","description","specs","colors","images","is_active","created_at","sku"].map(col => (
-                    <th key={col} className="text-left px-3 py-2 font-medium text-gray-500 uppercase tracking-wide">{col}</th>
-                  ))}
-                  <th className="px-3 py-2"></th>
+          <div className="rounded-xl border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 w-16">Фото</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Название</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Категория</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Цена</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-500">Статус</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-500">Действия</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={17} className="text-center py-10 text-gray-400">Товары не найдены</td></tr>
+                  <tr>
+                    <td colSpan={6} className="text-center py-16 text-gray-400">
+                      Товары не найдены
+                    </td>
+                  </tr>
                 )}
                 {filtered.map(p => (
-                  <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
-                    <td className="px-3 py-2 text-gray-400">{p.id}</td>
-                    <td className="px-3 py-2 font-medium max-w-[160px] truncate">{p.name}</td>
-                    <td className="px-3 py-2 text-gray-500">{p.category || "—"}</td>
-                    <td className="px-3 py-2">{p.price ?? "—"}</td>
-                    <td className="px-3 py-2 text-gray-400">{p.old_price ?? "NULL"}</td>
-                    <td className="px-3 py-2">
-                      {p.img
-                        ? <img src={p.img} alt="" className="w-8 h-8 object-cover rounded" />
-                        : <span className="text-gray-300">—</span>}
+                  <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      {p.img ? (
+                        <img src={p.img} alt={p.name} className="w-12 h-10 object-cover rounded-lg bg-gray-100" />
+                      ) : (
+                        <div className="w-12 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                          <Icon name="Image" size={16} className="text-gray-300" />
+                        </div>
+                      )}
                     </td>
-                    <td className="px-3 py-2">
-                      {p.tag ? <Badge variant="outline" className="text-xs">{p.tag}</Badge> : "—"}
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900">{p.name}</span>
+                      {p.tag && (
+                        <span className="ml-2 text-xs text-orange-500 font-medium">{p.tag}</span>
+                      )}
                     </td>
-                    <td className="px-3 py-2 text-gray-500">{p.angle_type || "—"}</td>
-                    <td className="px-3 py-2 text-gray-400 max-w-[120px] truncate">
-                      {Array.isArray(p.fabric) && p.fabric.length > 0 ? p.fabric.join(", ") : "—"}
+                    <td className="px-4 py-3 text-gray-500">{p.category || "—"}</td>
+                    <td className="px-4 py-3">
+                      {p.price ? (
+                        <span className="font-medium text-gray-900">
+                          {p.price.toLocaleString("ru-RU")} ₽
+                        </span>
+                      ) : "—"}
                     </td>
-                    <td className="px-3 py-2 text-gray-500 max-w-[180px] truncate">{p.description || "—"}</td>
-                    <td className="px-3 py-2 text-gray-400 max-w-[140px] truncate">
-                      {p.specs && Object.keys(p.specs).length > 0
-                        ? Object.entries(p.specs).map(([k,v]) => `${k}: ${v}`).join(", ")
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-400 max-w-[100px] truncate">
-                      {Array.isArray(p.colors) && p.colors.length > 0 ? p.colors.join(", ") : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-400">
-                      {Array.isArray(p.images) && p.images.length > 0 ? `${p.images.length} фото` : "—"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant={p.is_active ? "default" : "secondary"} className="text-xs">
-                        {p.is_active ? "TRUE" : "FALSE"}
+                    <td className="px-4 py-3">
+                      <Badge
+                        variant={p.is_active ? "default" : "secondary"}
+                        className="cursor-pointer select-none"
+                        onClick={() => toggleActive(p)}
+                      >
+                        {p.is_active ? "Активен" : "Скрыт"}
                       </Badge>
                     </td>
-                    <td className="px-3 py-2 text-gray-400">{p.created_at?.slice(0, 16).replace("T", " ")}</td>
-                    <td className="px-3 py-2 text-gray-400">{p.sku || "NULL"}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(p)}>
-                          <Icon name="Pencil" size={14} />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => del(p.id, p.name)}>
-                          <Icon name="Trash2" size={14} className="text-red-500" />
-                        </Button>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => openEdit(p)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        >
+                          <Icon name="Pencil" size={16} />
+                        </button>
+                        <button
+                          onClick={() => toggleActive(p)}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors"
+                        >
+                          <Icon name={p.is_active ? "EyeOff" : "Eye"} size={16} />
+                        </button>
+                        <button
+                          onClick={() => del(p.id, p.name)}
+                          className="p-1.5 rounded-lg hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Icon name="Trash2" size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -291,8 +320,13 @@ export default function Admin() {
             </table>
           </div>
         )}
+
+        {filtered.length > 0 && (
+          <p className="text-sm text-gray-400">Всего товаров: {filtered.length}</p>
+        )}
       </div>
 
+      {/* Диалог добавления/редактирования */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -336,11 +370,11 @@ export default function Admin() {
               <Textarea value={imagesText} onChange={e => setImagesText(e.target.value)} rows={3} placeholder={"https://фото1.jpg\nhttps://фото2.jpg"} />
             </div>
             <div className="col-span-2 flex flex-col gap-1">
-              <Label>Цвета (colors) — каждый с новой строки</Label>
+              <Label>Цвета — каждый с новой строки</Label>
               <Textarea value={colorsText} onChange={e => setColorsText(e.target.value)} rows={2} placeholder={"Серый\nБежевый"} />
             </div>
             <div className="col-span-2 flex flex-col gap-1">
-              <Label>Ткань / Материал (fabric) — каждый с новой строки</Label>
+              <Label>Ткань / Материал — каждый с новой строки</Label>
               <Textarea value={fabricText} onChange={e => setFabricText(e.target.value)} rows={2} placeholder={"Велюр\nРогожка"} />
             </div>
             <div className="col-span-2 flex flex-col gap-1">
