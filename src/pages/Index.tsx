@@ -1,8 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 
 const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
+
+interface ColorVariant {
+  name: string;
+  sku: string;
+  icon: string;
+  photos: string[];
+}
 
 interface Product {
   id: number;
@@ -13,6 +19,12 @@ interface Product {
   description: string;
   price: number | null;
   old_price: number | null;
+  angle_type: string;
+  fabric: string[];
+  specs: Record<string, string>;
+  colors: ColorVariant[];
+  images: string[];
+  sku: string;
 }
 
 const CATEGORIES = [
@@ -24,12 +36,168 @@ const CATEGORIES = [
   { id: 'cocoon', label: 'Коконы' },
 ];
 
+function ProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const colors: ColorVariant[] = Array.isArray(product.colors)
+    ? product.colors.map(c => typeof c === 'string' ? { name: c, sku: '', icon: '', photos: [] } : c)
+    : [];
+
+  const [selectedColor, setSelectedColor] = useState(0);
+  const [activePhoto, setActivePhoto] = useState(product.img || '');
+
+  const allPhotos = useMemo(() => {
+    const color = colors[selectedColor];
+    if (color?.photos?.length) return color.photos;
+    const imgs = product.images || [];
+    return product.img ? [product.img, ...imgs.filter(i => i !== product.img)] : imgs;
+  }, [selectedColor, product]);
+
+  useEffect(() => {
+    const color = colors[selectedColor];
+    if (color?.photos?.length) setActivePhoto(color.photos[0]);
+    else setActivePhoto(product.img || product.images?.[0] || '');
+  }, [selectedColor]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, []);
+
+  const specs = product.specs && typeof product.specs === 'object' && !Array.isArray(product.specs)
+    ? product.specs : {};
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Кнопка закрыть */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <Icon name="X" size={16} className="text-gray-600" />
+        </button>
+
+        <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-hidden h-full">
+          {/* Левая часть — галерея */}
+          <div className="md:w-[55%] flex flex-row md:flex-row-reverse shrink-0">
+            {/* Миниатюры */}
+            {allPhotos.length > 1 && (
+              <div className="flex flex-row md:flex-col gap-2 p-3 overflow-x-auto md:overflow-y-auto md:w-24 order-first md:order-last">
+                {allPhotos.map((photo, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActivePhoto(photo)}
+                    className={`shrink-0 w-16 h-14 md:w-full md:h-16 rounded overflow-hidden border-2 transition-all ${
+                      activePhoto === photo ? 'border-gray-800' : 'border-transparent hover:border-gray-300'
+                    }`}
+                  >
+                    <img src={photo} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            {/* Главное фото */}
+            <div className="flex-1 relative bg-white flex items-center justify-center min-h-[280px] md:min-h-0">
+              {activePhoto ? (
+                <>
+                  <img src={activePhoto} alt={product.name} className="w-full h-full object-contain p-4" />
+                  {allPhotos.length > 1 && (
+                    <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded">
+                      {allPhotos.indexOf(activePhoto) + 1} / {allPhotos.length}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-center text-gray-300">
+                  <Icon name="Image" size={48} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Правая часть — инфо */}
+          <div className="md:w-[45%] flex flex-col overflow-y-auto p-6 md:p-8 border-l border-gray-100">
+            {product.category && (
+              <p className="text-xs tracking-widest uppercase text-gray-400 mb-2">{product.category}</p>
+            )}
+            <h2 className="font-display text-3xl text-gray-900 mb-2">{product.name}</h2>
+
+            {product.price && (
+              <div className="flex items-baseline gap-3 mb-4">
+                <span className="text-2xl font-semibold text-gray-900">{product.price.toLocaleString('ru-RU')} ₽</span>
+                {product.old_price && (
+                  <span className="text-gray-400 line-through text-base">{product.old_price.toLocaleString('ru-RU')} ₽</span>
+                )}
+              </div>
+            )}
+
+            {product.description && (
+              <p className="text-sm text-gray-500 leading-relaxed mb-5">{product.description}</p>
+            )}
+
+            {/* Цвет обивки */}
+            {colors.length > 0 && (
+              <div className="mb-5">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs tracking-widest uppercase text-gray-400">Цвет обивки</p>
+                  <span className="text-sm text-gray-700">{colors[selectedColor]?.name}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((c, i) => (
+                    <button
+                      key={i}
+                      title={c.name}
+                      onClick={() => setSelectedColor(i)}
+                      className={`w-14 h-12 rounded overflow-hidden border-2 transition-all ${
+                        selectedColor === i ? 'border-gray-800' : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      {c.icon ? (
+                        <img src={c.icon} alt={c.name} className="w-full h-full object-cover" />
+                      ) : c.photos?.[0] ? (
+                        <img src={c.photos[0]} alt={c.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 text-center px-1">{c.name}</div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Характеристики */}
+            {Object.keys(specs).length > 0 && (
+              <div>
+                <p className="text-xs tracking-widest uppercase text-gray-400 mb-3">Характеристики</p>
+                <div className="flex flex-col divide-y divide-gray-100">
+                  {Object.entries(specs).map(([key, val], i) => (
+                    <div key={i} className="flex justify-between py-2 text-sm">
+                      <span className="text-gray-500">{key}</span>
+                      <span className="text-gray-900 font-medium text-right ml-4">{val}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {product.sku && (
+              <p className="text-xs text-gray-400 mt-4">Артикул: {product.sku}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const Index = () => {
   const [active, setActive] = useState('all');
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     fetch(API)
@@ -137,50 +305,50 @@ const Index = () => {
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-muted-foreground">Товары не найдены</div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((p, i) => (
-              <article
-                key={p.id}
-                onClick={() => navigate(`/product/${p.id}`)}
-                className="group animate-fade-in cursor-pointer"
-                style={{ animationDelay: `${i * 0.06}s` }}
-              >
-                <div className="relative overflow-hidden rounded-sm bg-secondary aspect-[16/10] mb-4">
-                  {p.img ? (
-                    <img
-                      src={p.img}
-                      alt={p.name}
-                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                      <Icon name="Image" size={40} />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  {p.tag && (
-                    <span className="absolute top-3 left-3 text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-gold">
-                      {p.tag}
-                    </span>
-                  )}
-                  <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-gold text-primary-foreground flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
-                    <Icon name="ArrowUpRight" size={16} />
-                  </div>
-                </div>
-                <h3 className="font-display text-xl mb-1 group-hover:text-gold transition-colors">{p.name}</h3>
-                {p.price && (
-                  <p className="text-gold font-medium text-sm">
-                    {p.price.toLocaleString('ru-RU')} ₽
-                    {p.old_price && (
-                      <span className="ml-2 text-muted-foreground line-through font-normal">
-                        {p.old_price.toLocaleString('ru-RU')} ₽
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filtered.map((p, i) => (
+                <article
+                  key={p.id}
+                  onClick={() => setSelectedProduct(p)}
+                  className="group animate-fade-in cursor-pointer"
+                  style={{ animationDelay: `${i * 0.06}s` }}
+                >
+                  <div className="relative overflow-hidden rounded-sm bg-white aspect-[16/10] mb-4 border border-border/30">
+                    {p.img ? (
+                      <img
+                        src={p.img}
+                        alt={p.name}
+                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                        <Icon name="Image" size={40} />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    {p.tag && (
+                      <span className="absolute top-3 left-3 text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-gold">
+                        {p.tag}
                       </span>
                     )}
-                  </p>
-                )}
-              </article>
-            ))}
-          </div>
+                    <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-gold text-primary-foreground flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
+                      <Icon name="ArrowUpRight" size={16} />
+                    </div>
+                  </div>
+                  <h3 className="font-display text-xl mb-1 group-hover:text-gold transition-colors">{p.name}</h3>
+                  {p.price && (
+                    <p className="text-gold font-medium text-sm">
+                      {p.price.toLocaleString('ru-RU')} ₽
+                      {p.old_price && (
+                        <span className="ml-2 text-muted-foreground line-through font-normal">
+                          {p.old_price.toLocaleString('ru-RU')} ₽
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </article>
+              ))}
+            </div>
           )}
         </div>
       </section>
@@ -226,7 +394,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* CONTACTS / CTA */}
+      {/* CONTACTS */}
       <section id="contacts" className="py-28">
         <div className="container text-center">
           <p className="text-gold text-xs tracking-mega uppercase mb-6">Сотрудничество</p>
@@ -248,13 +416,17 @@ const Index = () => {
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-border/60 py-12">
+      <footer className="border-t border-border/60 py-10">
         <div className="container flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p className="font-display text-lg text-foreground">МЕБЕЛЬ · Фабрика полного цикла</p>
-          <p>© 2026 · Все права защищены</p>
+          <p className="font-display text-base text-foreground">Волжская мебельная мануфактура</p>
+          <p>© 2024 ВММ. Все права защищены.</p>
         </div>
       </footer>
+
+      {/* Модальное окно товара */}
+      {selectedProduct && (
+        <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+      )}
     </div>
   );
 };

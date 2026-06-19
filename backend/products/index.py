@@ -13,12 +13,29 @@ CORS = {
     'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token',
 }
 
+def safe_json(val):
+    if val is None:
+        return val
+    if isinstance(val, (list, dict)):
+        return val
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except Exception:
+            try:
+                fixed = val.replace("'", '"').replace('None', 'null').replace('True', 'true').replace('False', 'false')
+                return json.loads(fixed)
+            except Exception:
+                return val
+    return val
+
 def row_to_dict(r):
     return {
         'id': r[0], 'name': r[1], 'category': r[2], 'price': r[3],
         'old_price': r[4], 'img': r[5], 'tag': r[6], 'angle_type': r[7],
-        'fabric': r[8], 'description': r[9], 'specs': r[10], 'colors': r[11],
-        'images': r[12], 'is_active': r[13], 'created_at': str(r[14]), 'sku': r[15],
+        'fabric': safe_json(r[8]), 'description': r[9], 'specs': safe_json(r[10]),
+        'colors': safe_json(r[11]), 'images': safe_json(r[12]),
+        'is_active': r[13], 'created_at': str(r[14]), 'sku': r[15],
     }
 
 SELECT_SQL = """
