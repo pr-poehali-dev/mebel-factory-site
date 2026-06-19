@@ -120,8 +120,28 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, []);
 
-  const specs = product.specs && typeof product.specs === 'object' && !Array.isArray(product.specs)
-    ? product.specs : {};
+  // specs приходит как объект где ключ — начало Python-строки, значение — продолжение
+  // Например: {"[{'label'": "'Размер...', ...}]"}
+  const specsList: { label: string; value: string }[] = (() => {
+    const raw = product.specs;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw as { label: string; value: string }[];
+    if (typeof raw === 'object') {
+      // Склеиваем все ключи и значения в одну строку и парсим
+      const entries = Object.entries(raw as Record<string, string>);
+      try {
+        const fullStr = entries.map(([k, v]) => k + ': ' + v).join(', ');
+        const fixed = fullStr
+          .replace(/'/g, '"')
+          .replace(/None/g, 'null')
+          .replace(/True/g, 'true')
+          .replace(/False/g, 'false');
+        const parsed = JSON.parse(fixed);
+        if (Array.isArray(parsed)) return parsed as { label: string; value: string }[];
+      } catch { /**/ }
+    }
+    return [];
+  })();
 
   const swatchUrl = (c: ColorVariant) => c.swatch || c.icon || c.images?.[0] || c.photos?.[0] || '';
 
@@ -228,14 +248,14 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
             )}
 
             {/* Характеристики */}
-            {Object.keys(specs).length > 0 && (
+            {specsList.length > 0 && (
               <div>
                 <p className="text-xs tracking-widest uppercase text-gray-400 mb-3">Характеристики</p>
                 <div className="flex flex-col divide-y divide-gray-100">
-                  {Object.entries(specs).map(([key, val], i) => (
+                  {specsList.map((s, i) => (
                     <div key={i} className="flex justify-between py-2 text-sm">
-                      <span className="text-gray-500">{key}</span>
-                      <span className="text-gray-900 font-medium text-right ml-4">{val}</span>
+                      <span className="text-gray-500">{s.label}</span>
+                      <span className="text-gray-900 font-medium text-right ml-4">{s.value}</span>
                     </div>
                   ))}
                 </div>
