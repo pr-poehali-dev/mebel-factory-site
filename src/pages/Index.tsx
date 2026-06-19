@@ -168,13 +168,6 @@ const Index = () => {
           </div>
 
           {/* Grid */}
-          {filtered.length === 0 && (
-            <div className="py-20 text-center text-muted-foreground">
-              <Icon name="SearchX" size={40} className="mx-auto mb-4 opacity-30" />
-              <p className="text-lg">Ничего не найдено</p>
-              <p className="text-sm mt-1">Попробуйте изменить запрос или выбрать другую категорию</p>
-            </div>
-          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filtered.map((p, i) => (
               <article
