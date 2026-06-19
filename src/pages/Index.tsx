@@ -6,8 +6,10 @@ const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702"
 interface ColorVariant {
   name: string;
   sku: string;
-  icon: string;
-  photos: string[];
+  icon?: string;
+  swatch?: string;
+  photos?: string[];
+  images?: string[];
 }
 
 interface Product {
@@ -36,26 +38,80 @@ const CATEGORIES = [
   { id: 'cocoon', label: 'Коконы' },
 ];
 
+// Парсит строку Python-формата в массив объектов
+function parseColors(raw: unknown): ColorVariant[] {
+  let data = raw;
+  // Если массив с одним строковым элементом — распарсить его
+  if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'string') {
+    try {
+      const fixed = (data[0] as string)
+        .replace(/'/g, '"')
+        .replace(/None/g, 'null')
+        .replace(/True/g, 'true')
+        .replace(/False/g, 'false');
+      data = JSON.parse(fixed);
+    } catch { return []; }
+  }
+  if (!Array.isArray(data)) return [];
+  return (data as ColorVariant[]).map(c =>
+    typeof c === 'string' ? { name: c, sku: '' } : c
+  );
+}
+
+function parseImages(raw: unknown): string[] {
+  if (Array.isArray(raw) && raw.length === 1 && typeof raw[0] === 'string') {
+    try {
+      const fixed = (raw[0] as string).replace(/'/g, '"');
+      const parsed = JSON.parse(fixed);
+      if (Array.isArray(parsed)) return parsed;
+    } catch { /**/ }
+  }
+  if (Array.isArray(raw)) return raw as string[];
+  return [];
+}
+
 function ProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
-  const colors: ColorVariant[] = Array.isArray(product.colors)
-    ? product.colors.map(c => typeof c === 'string' ? { name: c, sku: '', icon: '', photos: [] } : c)
-    : [];
+  const colors = parseColors(product.colors);
+  const generalImages = parseImages(product.images);
 
   const [selectedColor, setSelectedColor] = useState(0);
-  const [activePhoto, setActivePhoto] = useState(product.img || '');
+
+  const colorPhotos = useMemo(() => {
+    const c = colors[selectedColor];
+    if (!c) return [];
+    return c.images?.length ? c.images : c.photos?.length ? c.photos : [];
+  }, [selectedColor, colors]);
 
   const allPhotos = useMemo(() => {
-    const color = colors[selectedColor];
-    if (color?.photos?.length) return color.photos;
-    const imgs = product.images || [];
+    if (colorPhotos.length) return colorPhotos;
+    const imgs = generalImages;
     return product.img ? [product.img, ...imgs.filter(i => i !== product.img)] : imgs;
-  }, [selectedColor, product]);
+  }, [colorPhotos, generalImages, product.img]);
+
+  const [activePhoto, setActivePhoto] = useState(() => allPhotos[0] || product.img || '');
+  const [photoIdx, setPhotoIdx] = useState(0);
 
   useEffect(() => {
-    const color = colors[selectedColor];
-    if (color?.photos?.length) setActivePhoto(color.photos[0]);
-    else setActivePhoto(product.img || product.images?.[0] || '');
+    setPhotoIdx(0);
+    setActivePhoto(allPhotos[0] || product.img || '');
   }, [selectedColor]);
+
+  function goPhoto(dir: 1 | -1) {
+    const next = (photoIdx + dir + allPhotos.length) % allPhotos.length;
+    setPhotoIdx(next);
+    setActivePhoto(allPhotos[next]);
+  }
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') goPhoto(-1);
+      if (e.key === 'ArrowRight') goPhoto(1);
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [photoIdx, allPhotos]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -67,11 +123,12 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
   const specs = product.specs && typeof product.specs === 'object' && !Array.isArray(product.specs)
     ? product.specs : {};
 
+  const swatchUrl = (c: ColorVariant) => c.swatch || c.icon || c.images?.[0] || c.photos?.[0] || '';
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Кнопка закрыть */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
@@ -81,16 +138,16 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
 
         <div className="flex flex-col md:flex-row overflow-y-auto md:overflow-hidden h-full">
           {/* Левая часть — галерея */}
-          <div className="md:w-[55%] flex flex-row md:flex-row-reverse shrink-0">
-            {/* Миниатюры */}
+          <div className="md:w-[55%] flex shrink-0 md:h-full">
+            {/* Миниатюры слева */}
             {allPhotos.length > 1 && (
-              <div className="flex flex-row md:flex-col gap-2 p-3 overflow-x-auto md:overflow-y-auto md:w-24 order-first md:order-last">
+              <div className="flex flex-col gap-2 p-3 overflow-y-auto w-20 shrink-0">
                 {allPhotos.map((photo, i) => (
                   <button
                     key={i}
-                    onClick={() => setActivePhoto(photo)}
-                    className={`shrink-0 w-16 h-14 md:w-full md:h-16 rounded overflow-hidden border-2 transition-all ${
-                      activePhoto === photo ? 'border-gray-800' : 'border-transparent hover:border-gray-300'
+                    onClick={() => { setPhotoIdx(i); setActivePhoto(photo); }}
+                    className={`shrink-0 w-full aspect-square rounded overflow-hidden border-2 transition-all ${
+                      photoIdx === i ? 'border-gray-800' : 'border-transparent hover:border-gray-300'
                     }`}
                   >
                     <img src={photo} alt="" className="w-full h-full object-cover" />
@@ -98,21 +155,24 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
                 ))}
               </div>
             )}
-            {/* Главное фото */}
-            <div className="flex-1 relative bg-white flex items-center justify-center min-h-[280px] md:min-h-0">
-              {activePhoto ? (
+            {/* Главное фото + стрелки */}
+            <div className="flex-1 relative bg-white flex items-center justify-center min-h-[280px]">
+              {activePhoto
+                ? <img src={activePhoto} alt={product.name} className="w-full h-full object-contain p-4 max-h-[500px]" />
+                : <div className="text-gray-300"><Icon name="Image" size={48} /></div>
+              }
+              {allPhotos.length > 1 && (
                 <>
-                  <img src={activePhoto} alt={product.name} className="w-full h-full object-contain p-4" />
-                  {allPhotos.length > 1 && (
-                    <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded">
-                      {allPhotos.indexOf(activePhoto) + 1} / {allPhotos.length}
-                    </div>
-                  )}
+                  <button onClick={() => goPhoto(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm">
+                    <Icon name="ChevronLeft" size={16} className="text-gray-600" />
+                  </button>
+                  <button onClick={() => goPhoto(1)} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 border border-gray-200 rounded-full flex items-center justify-center hover:bg-gray-50 shadow-sm">
+                    <Icon name="ChevronRight" size={16} className="text-gray-600" />
+                  </button>
+                  <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-white/80 px-2 py-1 rounded">
+                    {photoIdx + 1} / {allPhotos.length}
+                  </div>
                 </>
-              ) : (
-                <div className="flex items-center justify-center text-gray-300">
-                  <Icon name="Image" size={48} />
-                </div>
               )}
             </div>
           </div>
@@ -145,24 +205,24 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
                   <span className="text-sm text-gray-700">{colors[selectedColor]?.name}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {colors.map((c, i) => (
-                    <button
-                      key={i}
-                      title={c.name}
-                      onClick={() => setSelectedColor(i)}
-                      className={`w-14 h-12 rounded overflow-hidden border-2 transition-all ${
-                        selectedColor === i ? 'border-gray-800' : 'border-gray-200 hover:border-gray-400'
-                      }`}
-                    >
-                      {c.icon ? (
-                        <img src={c.icon} alt={c.name} className="w-full h-full object-cover" />
-                      ) : c.photos?.[0] ? (
-                        <img src={c.photos[0]} alt={c.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 text-center px-1">{c.name}</div>
-                      )}
-                    </button>
-                  ))}
+                  {colors.map((c, i) => {
+                    const sw = swatchUrl(c);
+                    return (
+                      <button
+                        key={i}
+                        title={c.name}
+                        onClick={() => setSelectedColor(i)}
+                        className={`w-14 h-12 rounded overflow-hidden border-2 transition-all ${
+                          selectedColor === i ? 'border-gray-800' : 'border-gray-200 hover:border-gray-400'
+                        }`}
+                      >
+                        {sw
+                          ? <img src={sw} alt={c.name} className="w-full h-full object-cover" />
+                          : <div className="w-full h-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 text-center px-1">{c.name}</div>
+                        }
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
