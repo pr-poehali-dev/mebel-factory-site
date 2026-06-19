@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 
 const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
@@ -28,6 +29,7 @@ const Index = () => {
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch(API)
@@ -131,47 +133,51 @@ const Index = () => {
 
           {/* Grid */}
           {loading ? (
-            <div className="col-span-3 py-20 text-center text-muted-foreground">Загрузка каталога...</div>
+            <div className="py-20 text-center text-muted-foreground">Загрузка каталога...</div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-muted-foreground">Товары не найдены</div>
           ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map((p, i) => (
               <article
                 key={p.id}
+                onClick={() => navigate(`/product/${p.id}`)}
                 className="group animate-fade-in cursor-pointer"
                 style={{ animationDelay: `${i * 0.06}s` }}
               >
-                <div className="relative overflow-hidden rounded-sm bg-secondary aspect-[4/5] mb-5">
+                <div className="relative overflow-hidden rounded-sm bg-secondary aspect-[16/10] mb-4">
                   {p.img ? (
-                    <img src={p.img} alt={p.name} className="catalog-card-img w-full h-full object-cover" />
+                    <img
+                      src={p.img}
+                      alt={p.name}
+                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                       <Icon name="Image" size={40} />
                     </div>
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   {p.tag && (
-                    <span className="absolute top-4 left-4 text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-gold">
+                    <span className="absolute top-3 left-3 text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-gold">
                       {p.tag}
                     </span>
                   )}
-                  <div className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-gold text-primary-foreground flex items-center justify-center opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
-                    <Icon name="ArrowUpRight" size={18} />
+                  <div className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-gold text-primary-foreground flex items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
+                    <Icon name="ArrowUpRight" size={16} />
                   </div>
                 </div>
-                <h3 className="font-display text-2xl mb-1 group-hover:text-gold transition-colors">{p.name}</h3>
+                <h3 className="font-display text-xl mb-1 group-hover:text-gold transition-colors">{p.name}</h3>
                 {p.price && (
-                  <p className="text-gold font-medium mb-1">
+                  <p className="text-gold font-medium text-sm">
                     {p.price.toLocaleString('ru-RU')} ₽
                     {p.old_price && (
-                      <span className="ml-2 text-muted-foreground line-through font-normal text-sm">
+                      <span className="ml-2 text-muted-foreground line-through font-normal">
                         {p.old_price.toLocaleString('ru-RU')} ₽
                       </span>
                     )}
                   </p>
                 )}
-                <p className="text-sm text-muted-foreground">{p.description}</p>
               </article>
             ))}
           </div>
