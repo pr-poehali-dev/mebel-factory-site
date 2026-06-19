@@ -1,0 +1,19 @@
+{
+  "tests": [
+    {
+      "name": "Get public products",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "bodyMatcher": "none"
+    },
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"password": "wrongpassword"},
+      "expectedStatus": 401,
+      "bodyMatcher": "none"
+    }
+  ]
+}
