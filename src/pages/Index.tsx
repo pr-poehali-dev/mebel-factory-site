@@ -1,13 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
+
+const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
 
 interface Product {
   id: number;
   name: string;
   category: string;
   tag: string;
-  image: string;
-  desc: string;
+  img: string;
+  description: string;
+  price: number | null;
+  old_price: number | null;
 }
 
 const CATEGORIES = [
@@ -19,66 +23,24 @@ const CATEGORIES = [
   { id: 'cocoon', label: 'Коконы' },
 ];
 
-const PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: 'Прямой диван «Рогожка»',
-    category: 'sofa',
-    tag: 'Мягкая мебель',
-    image: 'https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/files/aa9ad76b-c7d2-4fbe-a6c0-8803d89da6d4.jpg',
-    desc: 'Обивка из ткани рогожки собственного производства, металлический каркас.',
-  },
-  {
-    id: 2,
-    name: 'Модульный угловой диван',
-    category: 'sofa',
-    tag: 'Мягкая мебель',
-    image: 'https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/files/17a152a5-2f44-4088-97ca-10c0769b0157.jpg',
-    desc: 'Просторная L-форма, прочный каркас и пластиковые опоры собственного производства.',
-  },
-  {
-    id: 3,
-    name: 'Кресло акцентное',
-    category: 'armchair',
-    tag: 'Мягкая мебель',
-    image: 'https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/files/b5fcf403-6aaa-499a-93fa-a544420b878f.jpg',
-    desc: 'Фактурная ткань, выразительный силуэт и фирменные декоры.',
-  },
-  {
-    id: 4,
-    name: 'Кровать с мягким изголовьем',
-    category: 'bed',
-    tag: 'Спальня',
-    image: 'https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/files/6b644bf1-8acb-46aa-82f0-4c6af28f1e2b.jpg',
-    desc: 'Мягкое изголовье, обивка из ткани рогожки, надёжный каркас.',
-  },
-  {
-    id: 5,
-    name: 'Комплект садовой мебели',
-    category: 'garden',
-    tag: 'Искусственный ротанг',
-    image: 'https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/files/495b1587-8c26-4b33-8f00-3aca3e86b22c.jpg',
-    desc: 'Плетение из лозы собственного производства, устойчивость к погоде.',
-  },
-  {
-    id: 6,
-    name: 'Подвесной кокон',
-    category: 'cocoon',
-    tag: 'Новинка',
-    image: 'https://cdn.poehali.dev/projects/b868189f-856e-402d-ac84-8be0d1c2cc04/files/93e1187e-d784-4c99-b52e-2dc3ff3b6368.jpg',
-    desc: 'Уютное кресло-кокон из искусственного ротанга с мягкими подушками.',
-  },
-];
-
 const Index = () => {
   const [active, setActive] = useState('all');
   const [search, setSearch] = useState('');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(API)
+      .then(r => r.json())
+      .then(d => setProducts(d.products || []))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(() => {
-    const byCategory = active === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.category === active);
+    const byCategory = active === 'all' ? products : products.filter((p) => p.category === active);
     const q = search.trim().toLowerCase();
     return q ? byCategory.filter((p) => p.name.toLowerCase().includes(q)) : byCategory;
-  }, [active, search]);
+  }, [active, search, products]);
 
   return (
     <div className="min-h-screen bg-background bg-grain text-foreground">
@@ -168,6 +130,11 @@ const Index = () => {
           </div>
 
           {/* Grid */}
+          {loading ? (
+            <div className="col-span-3 py-20 text-center text-muted-foreground">Загрузка каталога...</div>
+          ) : filtered.length === 0 ? (
+            <div className="py-20 text-center text-muted-foreground">Товары не найдены</div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filtered.map((p, i) => (
               <article
@@ -176,24 +143,39 @@ const Index = () => {
                 style={{ animationDelay: `${i * 0.06}s` }}
               >
                 <div className="relative overflow-hidden rounded-sm bg-secondary aspect-[4/5] mb-5">
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    className="catalog-card-img w-full h-full object-cover"
-                  />
+                  {p.img ? (
+                    <img src={p.img} alt={p.name} className="catalog-card-img w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                      <Icon name="Image" size={40} />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <span className="absolute top-4 left-4 text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-gold">
-                    {p.tag}
-                  </span>
+                  {p.tag && (
+                    <span className="absolute top-4 left-4 text-[10px] tracking-widest uppercase px-3 py-1.5 rounded-full bg-background/70 backdrop-blur-sm border border-border/60 text-gold">
+                      {p.tag}
+                    </span>
+                  )}
                   <div className="absolute bottom-4 right-4 w-11 h-11 rounded-full bg-gold text-primary-foreground flex items-center justify-center opacity-0 translate-y-3 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500">
                     <Icon name="ArrowUpRight" size={18} />
                   </div>
                 </div>
                 <h3 className="font-display text-2xl mb-1 group-hover:text-gold transition-colors">{p.name}</h3>
-                <p className="text-sm text-muted-foreground">{p.desc}</p>
+                {p.price && (
+                  <p className="text-gold font-medium mb-1">
+                    {p.price.toLocaleString('ru-RU')} ₽
+                    {p.old_price && (
+                      <span className="ml-2 text-muted-foreground line-through font-normal text-sm">
+                        {p.old_price.toLocaleString('ru-RU')} ₽
+                      </span>
+                    )}
+                  </p>
+                )}
+                <p className="text-sm text-muted-foreground">{p.description}</p>
               </article>
             ))}
           </div>
+          )}
         </div>
       </section>
 
