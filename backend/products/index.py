@@ -140,38 +140,70 @@ def handler(event: dict, context) -> dict:
         if not verify_admin():
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
         csv_text = body.get('csv', '')
-        reader = csv.DictReader(io.StringIO(csv_text))
+
+        def parse_json_or_list(val, sep='|'):
+            if not val:
+                return []
+            val = val.strip()
+            if val.startswith('['):
+                try:
+                    return json.loads(val)
+                except Exception:
+                    pass
+            return [u.strip() for u in val.split(sep) if u.strip()]
+
+        def parse_json_or_dict(val):
+            if not val:
+                return {}
+            val = val.strip()
+            if val.startswith('{'):
+                try:
+                    return json.loads(val)
+                except Exception:
+                    pass
+            result = {}
+            for part in val.split(';'):
+                if ':' in part:
+                    k, v = part.split(':', 1)
+                    result[k.strip()] = v.strip()
+            return result
+
+        def parse_int(val):
+            if not val:
+                return None
+            val = str(val).strip()
+            return int(val) if val.isdigit() else None
+
+        # Определяем разделитель — запятая или точка с запятой
+        delimiter = ';' if csv_text.count(';') > csv_text.count(',') else ','
+
+        reader = csv.DictReader(io.StringIO(csv_text), delimiter=delimiter)
         conn = get_conn()
         cur = conn.cursor()
         count = 0
-        for row in reader:
-            images = [u.strip() for u in row.get('images', '').split('|') if u.strip()]
-            colors_raw = [u.strip() for u in row.get('colors', '').split('|') if u.strip()]
-            fabric_raw = [u.strip() for u in row.get('fabric', '').split('|') if u.strip()]
-            specs = {}
-            for part in (row.get('specs') or '').split(';'):
-                if ':' in part:
-                    k, v = part.split(':', 1)
-                    specs[k.strip()] = v.strip()
-            cur.execute("""
-                INSERT INTO products (name, category, price, old_price, img, tag, angle_type,
-                    fabric, description, specs, colors, images, is_active, sku)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (
-                row.get('name', ''), row.get('category', ''),
-                int(row['price']) if row.get('price', '').strip().isdigit() else None,
-                int(row['old_price']) if row.get('old_price', '').strip().isdigit() else None,
-                row.get('img', ''), row.get('tag', ''), row.get('angle_type', ''),
-                json.dumps(fabric_raw, ensure_ascii=False),
-                row.get('description', ''),
-                json.dumps(specs, ensure_ascii=False),
-                json.dumps(colors_raw, ensure_ascii=False),
-                json.dumps(images, ensure_ascii=False),
-                True, row.get('sku', ''),
-            ))
-            count += 1
+        errors = []
+        for i, row in enumerate(reader):
+            try:
+                cur.execute("""
+                    INSERT INTO products (name, category, price, old_price, img, tag, angle_type,
+                        fabric, description, specs, colors, images, is_active, sku)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    row.get('name', ''), row.get('category', ''),
+                    parse_int(row.get('price')), parse_int(row.get('old_price')),
+                    row.get('img', ''), row.get('tag', ''), row.get('angle_type', ''),
+                    json.dumps(parse_json_or_list(row.get('fabric')), ensure_ascii=False),
+                    row.get('description', ''),
+                    json.dumps(parse_json_or_dict(row.get('specs')), ensure_ascii=False),
+                    json.dumps(parse_json_or_list(row.get('colors')), ensure_ascii=False),
+                    json.dumps(parse_json_or_list(row.get('images')), ensure_ascii=False),
+                    True, row.get('sku', ''),
+                ))
+                count += 1
+            except Exception as e:
+                errors.append(f"Row {i+2}: {str(e)}")
         conn.commit()
         conn.close()
-        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'imported': count, 'success': True})}
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'imported': count, 'errors': errors, 'success': True}, ensure_ascii=False)}
 
     return {'statusCode': 404, 'headers': CORS, 'body': json.dumps({'error': 'Not found'})}
