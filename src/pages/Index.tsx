@@ -276,6 +276,8 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
 const Index = () => {
   const [active, setActive] = useState('all');
   const [search, setSearch] = useState('');
+  const [angleFilter, setAngleFilter] = useState('');
+  const [fabricFilter, setFabricFilter] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -288,10 +290,16 @@ const Index = () => {
   }, []);
 
   const filtered = useMemo(() => {
-    const byCategory = active === 'all' ? products : products.filter((p) => p.category === active);
+    let result = active === 'all' ? products : products.filter((p) => p.category === active);
     const q = search.trim().toLowerCase();
-    return q ? byCategory.filter((p) => p.name.toLowerCase().includes(q)) : byCategory;
-  }, [active, search, products]);
+    if (q) result = result.filter((p) => p.name.toLowerCase().includes(q));
+    if (angleFilter) result = result.filter((p) => p.angle_type === angleFilter);
+    if (fabricFilter) result = result.filter((p) => {
+      const fab = Array.isArray(p.fabric) ? p.fabric : [];
+      return fab.some(f => f.toLowerCase() === fabricFilter.toLowerCase());
+    });
+    return result;
+  }, [active, search, angleFilter, fabricFilter, products]);
 
   return (
     <div className="min-h-screen bg-background bg-grain text-foreground">
@@ -364,7 +372,7 @@ const Index = () => {
           </div>
 
           {/* Filters */}
-          <div className="flex flex-wrap gap-3 mb-14">
+          <div className="flex flex-wrap gap-3 mb-5">
             {CATEGORIES.map((c) => (
               <button
                 key={c.id}
@@ -377,6 +385,34 @@ const Index = () => {
               >
                 {c.label}
               </button>
+            ))}
+          </div>
+
+          {/* Доп. фильтры */}
+          <div className="flex flex-wrap items-center gap-3 mb-10">
+            <span className="text-xs text-muted-foreground tracking-widest uppercase">Тип угла:</span>
+            {[{ v: '', l: 'Все' }, { v: 'straight', l: 'Прямой' }, { v: 'corner', l: 'Угловой' }].map(o => (
+              <button
+                key={o.v}
+                onClick={() => setAngleFilter(o.v)}
+                className={`px-4 py-1.5 text-xs tracking-wide rounded-full border transition-all duration-300 ${
+                  angleFilter === o.v
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/40'
+                }`}
+              >{o.l}</button>
+            ))}
+            <span className="text-xs text-muted-foreground tracking-widest uppercase ml-3">Ткань:</span>
+            {[{ v: '', l: 'Все' }, { v: 'Велюр', l: 'Велюр' }, { v: 'Рогожка', l: 'Рогожка' }].map(o => (
+              <button
+                key={o.v}
+                onClick={() => setFabricFilter(o.v)}
+                className={`px-4 py-1.5 text-xs tracking-wide rounded-full border transition-all duration-300 ${
+                  fabricFilter === o.v
+                    ? 'bg-foreground text-background border-foreground'
+                    : 'border-border text-muted-foreground hover:border-foreground/40'
+                }`}
+              >{o.l}</button>
             ))}
           </div>
 
