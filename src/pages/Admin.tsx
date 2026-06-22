@@ -14,6 +14,19 @@ const PRODUCTS_API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c
 const UPLOAD_API = "https://functions.poehali.dev/5219b3ca-5238-4e07-b920-249a40248742";
 
 const FABRIC_OPTIONS = ["Велюр", "Рогожка", "Экокожа", "Жаккард", "Микровелюр", "Флок", "Шенилл"];
+const CATEGORY_OPTIONS = [
+  { value: "sofa", label: "Диван" },
+  { value: "armchair", label: "Кресло" },
+  { value: "bed", label: "Кровать" },
+  { value: "garden", label: "Садовая мебель" },
+  { value: "cocoon", label: "Кокон" },
+  { value: "fabric", label: "Ткань" },
+];
+const ANGLE_OPTIONS = [
+  { value: "", label: "Не указан" },
+  { value: "straight", label: "Прямой" },
+  { value: "corner", label: "Угловой" },
+];
 
 interface ColorVariant {
   name: string;
@@ -379,11 +392,24 @@ export default function Admin() {
               </div>
               <div className="flex flex-col gap-1">
                 <Label>Категория</Label>
-                <Input value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} placeholder="Диван, Кресло..." />
+                <select
+                  value={form.category}
+                  onChange={e => setForm({ ...form, category: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">— выберите —</option>
+                  {CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
               </div>
               <div className="flex flex-col gap-1">
                 <Label>Тип угла</Label>
-                <Input value={form.angle_type} onChange={e => setForm({ ...form, angle_type: e.target.value })} placeholder="Угловой, Прямой..." />
+                <select
+                  value={form.angle_type}
+                  onChange={e => setForm({ ...form, angle_type: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {ANGLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
               </div>
               <div className="flex flex-col gap-1">
                 <Label>Цена (₽) *</Label>

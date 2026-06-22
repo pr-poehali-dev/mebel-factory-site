@@ -36,6 +36,7 @@ const CATEGORIES = [
   { id: 'bed', label: 'Кровати' },
   { id: 'garden', label: 'Садовая мебель' },
   { id: 'cocoon', label: 'Коконы' },
+  { id: 'fabric', label: 'Ткань' },
 ];
 
 // Парсит строку Python-формата в массив объектов
