@@ -39,20 +39,34 @@ const CATEGORIES = [
   { id: 'fabric', label: 'Ткань' },
 ];
 
+function pyToJson(s: string): unknown {
+  try {
+    return JSON.parse(
+      s.replace(/'/g, '"').replace(/None/g, 'null').replace(/True/g, 'true').replace(/False/g, 'false')
+    );
+  } catch { return null; }
+}
+
 // Парсит строку Python-формата в массив объектов
 function parseColors(raw: unknown): ColorVariant[] {
   let data = raw;
-  // Если массив с одним строковым элементом — распарсить его
+
+  // Вариант 1: массив с одной строкой — весь питон-массив как строка
   if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'string') {
-    try {
-      const fixed = (data[0] as string)
-        .replace(/'/g, '"')
-        .replace(/None/g, 'null')
-        .replace(/True/g, 'true')
-        .replace(/False/g, 'false');
-      data = JSON.parse(fixed);
-    } catch { return []; }
+    const parsed = pyToJson(data[0] as string);
+    if (Array.isArray(parsed)) data = parsed;
+    else return [];
   }
+
+  // Вариант 2: массив объектов, но у одного из них поле name содержит питон-строку с массивом
+  if (Array.isArray(data) && data.length === 1 && typeof (data[0] as ColorVariant)?.name === 'string') {
+    const nameVal = (data[0] as ColorVariant).name;
+    if (nameVal.trim().startsWith('[')) {
+      const parsed = pyToJson(nameVal);
+      if (Array.isArray(parsed)) data = parsed;
+    }
+  }
+
   if (!Array.isArray(data)) return [];
   return (data as ColorVariant[]).map(c =>
     typeof c === 'string' ? { name: c, sku: '' } : c
