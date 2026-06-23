@@ -112,7 +112,7 @@ export default function Admin() {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const MAX = 1400;
+        const MAX = 1200;
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -122,7 +122,14 @@ export default function Admin() {
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
         URL.revokeObjectURL(url);
-        resolve(canvas.toDataURL("image/jpeg", 0.82));
+        // Сжимаем до тех пор пока base64 < 2MB
+        let quality = 0.8;
+        let result = canvas.toDataURL("image/jpeg", quality);
+        while (result.length > 2 * 1024 * 1024 && quality > 0.3) {
+          quality -= 0.1;
+          result = canvas.toDataURL("image/jpeg", quality);
+        }
+        resolve(result);
       };
       img.src = url;
     });
