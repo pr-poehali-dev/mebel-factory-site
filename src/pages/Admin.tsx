@@ -145,6 +145,7 @@ export default function Admin() {
         toast({ title: `Ошибка загрузки: ${res.status} — ${data.error || JSON.stringify(data)}`, variant: "destructive" });
         return "";
       }
+      toast({ title: "Фото загружено!" });
       return data.url || "";
     } finally {
       setUploading("");
