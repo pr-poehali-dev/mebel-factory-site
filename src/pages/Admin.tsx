@@ -107,16 +107,31 @@ export default function Admin() {
 
   useEffect(() => { if (token) loadProducts(); }, [token]);
 
+  async function compressImage(file: File): Promise<string> {
+    return new Promise(resolve => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1400;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = url;
+    });
+  }
+
   async function uploadFile(file: File, hint: string): Promise<string> {
     setUploading(hint);
     try {
-      console.log("uploadFile start", hint, file.name, file.size);
-      const reader = new FileReader();
-      const base64: string = await new Promise(resolve => {
-        reader.onload = e => resolve(e.target?.result as string);
-        reader.readAsDataURL(file);
-      });
-      console.log("base64 ready, sending to", UPLOAD_API);
+      const base64 = await compressImage(file);
       const currentToken = sessionStorage.getItem("admin_token") || token;
       const res = await fetch(UPLOAD_API, {
         method: "POST",
