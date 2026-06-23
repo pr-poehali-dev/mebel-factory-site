@@ -78,6 +78,7 @@ export default function Admin() {
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState("");
   const csvRef = useRef<HTMLInputElement>(null);
+  const mainPhotoRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   async function login() {
@@ -437,13 +438,11 @@ export default function Admin() {
               <Label>Главное фото</Label>
               <div className="flex gap-2">
                 <Input value={form.img} onChange={e => setForm({ ...form, img: e.target.value })} placeholder="https://..." className="flex-1" />
-                <label className="cursor-pointer">
-                  <Button variant="outline" size="sm" className="gap-1 pointer-events-none" asChild>
-                    <span><Icon name="Upload" size={14} />Загрузить</span>
-                  </Button>
-                  <input type="file" accept="image/*" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; console.log("file selected:", f?.name, f?.size); if (f) uploadMainPhoto(f); e.target.value = ""; }} />
-                </label>
+                <Button variant="outline" size="sm" className="gap-1" onClick={() => mainPhotoRef.current?.click()}>
+                  <Icon name="Upload" size={14} />Загрузить
+                </Button>
+                <input ref={mainPhotoRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) uploadMainPhoto(f); e.target.value = ""; }} />
               </div>
               {form.img && <img src={form.img} alt="" className="w-28 h-24 object-cover rounded-xl border" />}
             </div>
