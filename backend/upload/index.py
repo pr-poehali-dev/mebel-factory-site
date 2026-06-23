@@ -16,12 +16,12 @@ def handler(event: dict, context) -> dict:
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
 
-    token = (event.get('headers') or {}).get('X-Admin-Token', '')
-    if token != os.environ.get('ADMIN_PASSWORD', ''):
-        return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
-
     raw_body = event.get('body') or ''
     body = json.loads(raw_body) if raw_body.strip() else {}
+
+    token = (event.get('headers') or {}).get('X-Admin-Token', '') or body.get('token', '')
+    if token != os.environ.get('ADMIN_PASSWORD', ''):
+        return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
 
     file_data = body.get('file')
     file_name = body.get('name', 'photo.jpg')

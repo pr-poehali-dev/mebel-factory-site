@@ -118,8 +118,8 @@ export default function Admin() {
       console.log("base64 ready, sending to", UPLOAD_API);
       const res = await fetch(UPLOAD_API, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-Admin-Token": token },
-        body: JSON.stringify({ file: base64, name: file.name, content_type: file.type }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, name: file.name, content_type: file.type, token }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
