@@ -108,29 +108,34 @@ export default function Admin() {
 
   async function uploadFile(file: File, hint: string): Promise<string> {
     setUploading(hint);
-    const reader = new FileReader();
-    const base64: string = await new Promise(resolve => {
-      reader.onload = e => resolve(e.target?.result as string);
-      reader.readAsDataURL(file);
-    });
-    const res = await fetch(UPLOAD_API, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
-      body: JSON.stringify({ file: base64, name: file.name, content_type: file.type }),
-    });
-    const data = await res.json();
-    setUploading("");
-    return data.url || "";
+    try {
+      const reader = new FileReader();
+      const base64: string = await new Promise(resolve => {
+        reader.onload = e => resolve(e.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch(UPLOAD_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+        body: JSON.stringify({ file: base64, name: file.name, content_type: file.type }),
+      });
+      const data = await res.json();
+      return data.url || "";
+    } finally {
+      setUploading("");
+    }
   }
 
   function openCreate() {
     setEditId(null);
     setForm(emptyForm());
     setSpecsText("");
+    setUploading("");
     setDialogOpen(true);
   }
 
   function openEdit(p: Product) {
+    setUploading("");
     setEditId(p.id);
     setForm({
       name: p.name, category: p.category, price: p.price, old_price: p.old_price,
