@@ -120,6 +120,10 @@ export default function Admin() {
         body: JSON.stringify({ file: base64, name: file.name, content_type: file.type }),
       });
       const data = await res.json();
+      if (!res.ok || !data.url) {
+        toast({ title: `Ошибка загрузки: ${res.status} — ${data.error || JSON.stringify(data)}`, variant: "destructive" });
+        return "";
+      }
       return data.url || "";
     } finally {
       setUploading("");
