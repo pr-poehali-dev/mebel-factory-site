@@ -3,12 +3,42 @@ import os
 import base64
 import uuid
 import boto3
+import re
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-Admin-Token',
 }
+
+def parse_multipart(body_bytes: bytes, boundary: str):
+    """Парсит multipart/form-data и возвращает dict с полями"""
+    fields = {}
+    delimiter = ('--' + boundary).encode()
+    parts = body_bytes.split(delimiter)
+    for part in parts[1:]:
+        if part in (b'--\r\n', b'--', b'\r\n'):
+            continue
+        if b'\r\n\r\n' not in part:
+            continue
+        headers_raw, _, content = part.partition(b'\r\n\r\n')
+        content = content.rstrip(b'\r\n--')
+        headers_str = headers_raw.decode('utf-8', errors='replace')
+        disp = re.search(r'Content-Disposition:[^\r\n]*name="([^"]+)"', headers_str)
+        if not disp:
+            continue
+        name = disp.group(1)
+        filename_match = re.search(r'filename="([^"]+)"', headers_str)
+        ct_match = re.search(r'Content-Type:\s*(\S+)', headers_str)
+        if filename_match:
+            fields[name] = {
+                'filename': filename_match.group(1),
+                'content_type': ct_match.group(1) if ct_match else 'application/octet-stream',
+                'data': content,
+            }
+        else:
+            fields[name] = content.decode('utf-8', errors='replace')
+    return fields
 
 def handler(event: dict, context) -> dict:
     """Загрузка фото товаров в S3 хранилище"""
@@ -18,26 +48,50 @@ def handler(event: dict, context) -> dict:
 
     raw_body = event.get('body') or ''
     if event.get('isBase64Encoded'):
-        import base64 as _b64
-        raw_body = _b64.b64decode(raw_body).decode('utf-8')
-    body = json.loads(raw_body) if raw_body.strip() else {}
+        body_bytes = base64.b64decode(raw_body)
+    else:
+        body_bytes = raw_body.encode('utf-8') if isinstance(raw_body, str) else raw_body
 
-    token = (event.get('headers') or {}).get('X-Admin-Token', '') or body.get('token', '')
+    content_type_header = (event.get('headers') or {}).get('content-type', '') or \
+                          (event.get('headers') or {}).get('Content-Type', '')
+
     admin_pass = os.environ.get('ADMIN_PASSWORD', '')
-    if not token or token != admin_pass:
-        return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized', 'token_len': len(token), 'pass_len': len(admin_pass)})}
 
-    file_data = body.get('file')
-    file_name = body.get('name', 'photo.jpg')
-    content_type = body.get('content_type', 'image/jpeg')
+    # multipart/form-data
+    if 'multipart/form-data' in content_type_header:
+        boundary_match = re.search(r'boundary=([^\s;]+)', content_type_header)
+        if not boundary_match:
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'No boundary'})}
+        boundary = boundary_match.group(1)
+        fields = parse_multipart(body_bytes, boundary)
 
-    if not file_data:
-        return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'No file provided'})}
+        token = fields.get('token', '')
+        if not token or token != admin_pass:
+            return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
 
-    if ',' in file_data:
-        file_data = file_data.split(',', 1)[1]
+        file_field = fields.get('file')
+        if not file_field or not isinstance(file_field, dict):
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'No file provided'})}
 
-    file_bytes = base64.b64decode(file_data)
+        file_bytes = file_field['data']
+        file_name = file_field['filename']
+        content_type = file_field['content_type']
+
+    # application/json (старый формат base64)
+    else:
+        body = json.loads(body_bytes.decode('utf-8')) if body_bytes.strip() else {}
+        token = (event.get('headers') or {}).get('X-Admin-Token', '') or body.get('token', '')
+        if not token or token != admin_pass:
+            return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
+
+        file_data = body.get('file', '')
+        file_name = body.get('name', 'photo.jpg')
+        content_type = body.get('content_type', 'image/jpeg')
+        if not file_data:
+            return {'statusCode': 400, 'headers': CORS, 'body': json.dumps({'error': 'No file provided'})}
+        if ',' in file_data:
+            file_data = file_data.split(',', 1)[1]
+        file_bytes = base64.b64decode(file_data)
 
     ext = file_name.rsplit('.', 1)[-1].lower() if '.' in file_name else 'jpg'
     unique_name = f"products/{uuid.uuid4().hex}.{ext}"

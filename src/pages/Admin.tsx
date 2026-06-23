@@ -107,7 +107,7 @@ export default function Admin() {
 
   useEffect(() => { if (token) loadProducts(); }, [token]);
 
-  async function compressImage(file: File): Promise<string> {
+  async function compressImage(file: File): Promise<Blob> {
     return new Promise(resolve => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -122,14 +122,7 @@ export default function Admin() {
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
         URL.revokeObjectURL(url);
-        // Сжимаем до тех пор пока base64 < 2MB
-        let quality = 0.8;
-        let result = canvas.toDataURL("image/jpeg", quality);
-        while (result.length > 2 * 1024 * 1024 && quality > 0.3) {
-          quality -= 0.1;
-          result = canvas.toDataURL("image/jpeg", quality);
-        }
-        resolve(result);
+        canvas.toBlob(blob => resolve(blob!), "image/jpeg", 0.82);
       };
       img.src = url;
     });
@@ -138,12 +131,14 @@ export default function Admin() {
   async function uploadFile(file: File, hint: string): Promise<string> {
     setUploading(hint);
     try {
-      const base64 = await compressImage(file);
+      const blob = await compressImage(file);
       const currentToken = sessionStorage.getItem("admin_token") || token;
+      const formData = new FormData();
+      formData.append("file", blob, file.name);
+      formData.append("token", currentToken);
       const res = await fetch(UPLOAD_API, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64, name: file.name, content_type: file.type, token: currentToken }),
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
