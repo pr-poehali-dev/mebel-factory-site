@@ -17,11 +17,15 @@ def handler(event: dict, context) -> dict:
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
 
     raw_body = event.get('body') or ''
+    if event.get('isBase64Encoded'):
+        import base64 as _b64
+        raw_body = _b64.b64decode(raw_body).decode('utf-8')
     body = json.loads(raw_body) if raw_body.strip() else {}
 
     token = (event.get('headers') or {}).get('X-Admin-Token', '') or body.get('token', '')
-    if token != os.environ.get('ADMIN_PASSWORD', ''):
-        return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
+    admin_pass = os.environ.get('ADMIN_PASSWORD', '')
+    if not token or token != admin_pass:
+        return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized', 'token_len': len(token), 'pass_len': len(admin_pass)})}
 
     file_data = body.get('file')
     file_name = body.get('name', 'photo.jpg')

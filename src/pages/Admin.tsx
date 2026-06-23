@@ -117,10 +117,11 @@ export default function Admin() {
         reader.readAsDataURL(file);
       });
       console.log("base64 ready, sending to", UPLOAD_API);
+      const currentToken = sessionStorage.getItem("admin_token") || token;
       const res = await fetch(UPLOAD_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ file: base64, name: file.name, content_type: file.type, token }),
+        body: JSON.stringify({ file: base64, name: file.name, content_type: file.type, token: currentToken }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
