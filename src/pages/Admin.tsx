@@ -109,11 +109,13 @@ export default function Admin() {
   async function uploadFile(file: File, hint: string): Promise<string> {
     setUploading(hint);
     try {
+      console.log("uploadFile start", hint, file.name, file.size);
       const reader = new FileReader();
       const base64: string = await new Promise(resolve => {
         reader.onload = e => resolve(e.target?.result as string);
         reader.readAsDataURL(file);
       });
+      console.log("base64 ready, sending to", UPLOAD_API);
       const res = await fetch(UPLOAD_API, {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Admin-Token": token },
@@ -440,7 +442,7 @@ export default function Admin() {
                     <span><Icon name="Upload" size={14} />Загрузить</span>
                   </Button>
                   <input type="file" accept="image/*" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadMainPhoto(f); e.target.value = ""; }} />
+                    onChange={e => { const f = e.target.files?.[0]; console.log("file selected:", f?.name, f?.size); if (f) uploadMainPhoto(f); e.target.value = ""; }} />
                 </label>
               </div>
               {form.img && <img src={form.img} alt="" className="w-28 h-24 object-cover rounded-xl border" />}
