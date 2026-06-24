@@ -79,6 +79,8 @@ export default function Admin() {
   const [uploading, setUploading] = useState("");
   const csvRef = useRef<HTMLInputElement>(null);
   const mainPhotoRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const specsRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
   async function login() {
@@ -187,11 +189,16 @@ export default function Admin() {
     setSpecsText("");
     setUploading("");
     setDialogOpen(true);
+    setTimeout(() => {
+      if (descriptionRef.current) descriptionRef.current.value = "";
+      if (specsRef.current) specsRef.current.value = "";
+    }, 0);
   }
 
   function openEdit(p: Product) {
     setUploading("");
     setEditId(p.id);
+    const specsStr = (Array.isArray(p.specs) ? p.specs : []).map((s: { label: string; value: string }) => `${s.label}: ${s.value}`).join("\n");
     setForm({
       name: p.name, category: p.category, price: p.price, old_price: p.old_price,
       img: p.img, tag: p.tag, angle_type: p.angle_type,
@@ -204,8 +211,13 @@ export default function Admin() {
       images: p.images || [],
       is_active: p.is_active, sku: p.sku,
     });
-    setSpecsText((Array.isArray(p.specs) ? p.specs : []).map((s: { label: string; value: string }) => `${s.label}: ${s.value}`).join("\n"));
+    setSpecsText(specsStr);
     setDialogOpen(true);
+    // Принудительно устанавливаем значения в DOM через ref (обходит баги с controlled input)
+    setTimeout(() => {
+      if (descriptionRef.current) descriptionRef.current.value = p.description || "";
+      if (specsRef.current) specsRef.current.value = specsStr;
+    }, 0);
   }
 
   function parseSpecs(text: string): { label: string; value: string }[] {
@@ -219,7 +231,9 @@ export default function Admin() {
     if (!form.name.trim()) { toast({ title: "Укажите название", variant: "destructive" }); return; }
     setSaving(true);
     try {
-      const payload = { ...form, specs: parseSpecs(specsText) };
+      const description = descriptionRef.current?.value ?? form.description;
+      const specsRaw = specsRef.current?.value ?? specsText;
+      const payload = { ...form, description, specs: parseSpecs(specsRaw) };
       const bodyStr = JSON.stringify(payload);
       console.log("[SAVE] body size:", bodyStr.length, "description:", payload.description?.length, "specs:", payload.specs?.length);
       const url = editId ? `${PRODUCTS_API}?action=update&id=${editId}` : `${PRODUCTS_API}?action=create`;
@@ -535,13 +549,13 @@ export default function Admin() {
             {/* Описание */}
             <div className="flex flex-col gap-1">
               <Label>Описание</Label>
-              <Textarea value={form.description} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, description: v })); }} rows={6} placeholder="Описание товара..." />
+              <Textarea ref={descriptionRef} defaultValue={form.description} rows={6} placeholder="Описание товара..." />
             </div>
 
             {/* Характеристики */}
             <div className="flex flex-col gap-1">
               <Label>Характеристики <span className="text-gray-400 font-normal text-xs">(каждая с новой строки, формат: Название: Значение)</span></Label>
-              <Textarea value={specsText} onChange={e => setSpecsText(e.target.value)} rows={5}
+              <Textarea ref={specsRef} defaultValue={specsText} rows={5}
                 placeholder={"Основа сиденья: ламели (латы);\nКаркас: металл;\nРазмеры: 218 x 90 x 152 см"} />
             </div>
 
