@@ -39,6 +39,15 @@ const CATEGORIES = [
   { id: 'fabric', label: 'Ткань' },
 ];
 
+const CATEGORY_LABEL: Record<string, string> = {
+  sofa: 'Диван',
+  armchair: 'Кресло',
+  bed: 'Кровать',
+  garden: 'Садовая мебель',
+  cocoon: 'Кокон',
+  fabric: 'Ткань',
+};
+
 function pyToJson(s: string): unknown {
   try {
     return JSON.parse(
@@ -109,7 +118,7 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
   useEffect(() => {
     setPhotoIdx(0);
     setActivePhoto(allPhotos[0] || product.img || '');
-  }, [selectedColor]);
+  }, [selectedColor, allPhotos]);
 
   function goPhoto(dir: 1 | -1) {
     const next = (photoIdx + dir + allPhotos.length) % allPhotos.length;
@@ -215,7 +224,7 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
           {/* Правая часть — инфо */}
           <div className="md:w-[45%] flex flex-col overflow-y-auto p-6 md:p-8 border-l border-gray-100">
             {product.category && (
-              <p className="text-xs tracking-widest uppercase text-gray-400 mb-2">{product.category}</p>
+              <p className="text-xs tracking-widest uppercase text-gray-400 mb-2">{CATEGORY_LABEL[product.category] || product.category}</p>
             )}
             <h2 className="font-display text-3xl text-gray-900 mb-2">{product.name}</h2>
 

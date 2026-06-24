@@ -4,6 +4,15 @@ import Icon from '@/components/ui/icon';
 
 const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
 
+const CATEGORY_LABEL: Record<string, string> = {
+  sofa: 'Диван',
+  armchair: 'Кресло',
+  bed: 'Кровать',
+  garden: 'Садовая мебель',
+  cocoon: 'Кокон',
+  fabric: 'Ткань',
+};
+
 interface ColorVariant {
   name: string;
   sku: string;
@@ -53,13 +62,12 @@ export default function Product() {
 
   useEffect(() => {
     if (!product) return;
-    const colors = product.colors || [];
+    const colors = Array.isArray(product.colors) ? product.colors : [];
     const color = colors[selectedColor];
-    if (color?.photos?.length) {
-      setActivePhoto(color.photos[0]);
-    } else {
-      setActivePhoto(product.img || product.images?.[0] || '');
-    }
+    const firstPhoto = color?.photos?.length
+      ? color.photos[0]
+      : product.img || product.images?.[0] || '';
+    setActivePhoto(firstPhoto);
   }, [selectedColor, product]);
 
   const allPhotos = (() => {
@@ -162,7 +170,7 @@ export default function Product() {
           {/* Инфо */}
           <div className="flex flex-col gap-6">
             {product.category && (
-              <p className="text-gold text-xs tracking-mega uppercase">{product.category}</p>
+              <p className="text-gold text-xs tracking-mega uppercase">{CATEGORY_LABEL[product.category] || product.category}</p>
             )}
             <h1 className="font-display text-4xl md:text-5xl leading-tight">{product.name}</h1>
 
