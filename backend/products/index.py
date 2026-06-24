@@ -3,6 +3,7 @@ import os
 import psycopg2
 import csv
 import io
+import base64
 
 def get_conn():
     return psycopg2.connect(os.environ['DATABASE_URL'])
@@ -53,6 +54,8 @@ def handler(event: dict, context) -> dict:
     method = event.get('httpMethod', 'GET')
     params = event.get('queryStringParameters') or {}
     raw_body = event.get('body') or ''
+    if event.get('isBase64Encoded') and raw_body:
+        raw_body = base64.b64decode(raw_body).decode('utf-8')
     body = json.loads(raw_body) if raw_body.strip() else {}
     action = params.get('action', '')
 
