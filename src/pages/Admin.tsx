@@ -215,7 +215,7 @@ export default function Admin() {
   }
 
   async function save() {
-    console.log("[SAVE CALLED] editId:", editId, "name:", form.name, "desc len:", form.description?.length);
+    if (uploading) { toast({ title: "Подождите, фото ещё загружается...", variant: "destructive" }); return; }
     if (!form.name.trim()) { toast({ title: "Укажите название", variant: "destructive" }); return; }
     setSaving(true);
     try {
@@ -651,8 +651,8 @@ export default function Admin() {
           </div>
 
           <div className="flex gap-2 pt-4 border-t mt-2">
-            <Button onClick={save} disabled={saving || !!uploading} className="flex-1">
-              {saving ? "Сохраняем..." : "Сохранить изменения"}
+            <Button onClick={save} disabled={saving} className="flex-1">
+              {saving ? "Сохраняем..." : uploading ? `Загрузка...` : "Сохранить изменения"}
             </Button>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Отмена</Button>
           </div>
