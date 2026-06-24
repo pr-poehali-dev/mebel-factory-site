@@ -215,6 +215,7 @@ export default function Admin() {
   }
 
   async function save() {
+    console.log("[SAVE CALLED] editId:", editId, "name:", form.name, "desc len:", form.description?.length);
     if (!form.name.trim()) { toast({ title: "Укажите название", variant: "destructive" }); return; }
     setSaving(true);
     try {
