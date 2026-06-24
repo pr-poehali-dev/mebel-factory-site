@@ -94,6 +94,8 @@ def handler(event: dict, context) -> dict:
     if method == 'POST' and action == 'create':
         if not verify_admin():
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
+        desc = body.get('description')
+        print(f"[CREATE] description len={len(desc) if desc else 0}, value={repr(desc[:200]) if desc else None}")
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("""
@@ -105,7 +107,7 @@ def handler(event: dict, context) -> dict:
             body.get('price') or None, body.get('old_price') or None,
             body.get('img'), body.get('tag'), body.get('angle_type'),
             json.dumps(body.get('fabric', []), ensure_ascii=False),
-            body.get('description'),
+            desc,
             json.dumps(body.get('specs', {}), ensure_ascii=False),
             json.dumps(body.get('colors', []), ensure_ascii=False),
             json.dumps(body.get('images', []), ensure_ascii=False),
@@ -121,6 +123,8 @@ def handler(event: dict, context) -> dict:
         if not verify_admin():
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
         product_id = params.get('id')
+        desc = body.get('description')
+        print(f"[UPDATE] id={product_id}, description len={len(desc) if desc else 0}, value={repr(desc[:200]) if desc else None}")
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("""
@@ -133,7 +137,7 @@ def handler(event: dict, context) -> dict:
             body.get('price') or None, body.get('old_price') or None,
             body.get('img'), body.get('tag'), body.get('angle_type'),
             json.dumps(body.get('fabric', []), ensure_ascii=False),
-            body.get('description'),
+            desc,
             json.dumps(body.get('specs', {}), ensure_ascii=False),
             json.dumps(body.get('colors', []), ensure_ascii=False),
             json.dumps(body.get('images', []), ensure_ascii=False),
