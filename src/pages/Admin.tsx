@@ -46,7 +46,7 @@ interface Product {
   angle_type: string;
   fabric: string[];
   description: string;
-  specs: Record<string, string>;
+  specs: { label: string; value: string }[];
   colors: ColorVariant[];
   images: string[];
   is_active: boolean;
@@ -59,7 +59,7 @@ const emptyColor = (): ColorVariant => ({ name: "", sku: "", icon: "", photos: [
 const emptyForm = (): Omit<Product, "id" | "created_at"> => ({
   name: "", category: "", price: null, old_price: null,
   img: "", tag: "", angle_type: "", fabric: [],
-  description: "", specs: {}, colors: [], images: [],
+  description: "", specs: [], colors: [], images: [],
   is_active: true, sku: "",
 });
 
@@ -197,31 +197,27 @@ export default function Admin() {
       img: p.img, tag: p.tag, angle_type: p.angle_type,
       fabric: Array.isArray(p.fabric) ? p.fabric : [],
       description: p.description,
-      specs: p.specs || {},
+      specs: Array.isArray(p.specs) ? p.specs : [],
       colors: Array.isArray(p.colors)
         ? p.colors.map(c => typeof c === "string" ? { name: c, sku: "", icon: "", photos: [] } : c)
         : [],
       images: p.images || [],
       is_active: p.is_active, sku: p.sku,
     });
-    setSpecsText(Object.entries(p.specs || {}).map(([k, v]) => `${k}: ${v}`).join("\n"));
+    setSpecsText((Array.isArray(p.specs) ? p.specs : []).map((s: { label: string; value: string }) => `${s.label}: ${s.value}`).join("\n"));
     setDialogOpen(true);
   }
 
-  function parseSpecs(text: string): Record<string, string> {
-    const result: Record<string, string> = {};
-    text.split("\n").forEach(line => {
-      const idx = line.indexOf(":");
-      if (idx > 0) result[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
-    });
-    return result;
+  function parseSpecs(text: string): { label: string; value: string }[] {
+    return text.split("\n")
+      .map(line => { const idx = line.indexOf(":"); return idx > 0 ? { label: line.slice(0, idx).trim(), value: line.slice(idx + 1).trim() } : null; })
+      .filter(Boolean) as { label: string; value: string }[];
   }
 
   async function save() {
     if (!form.name.trim()) { toast({ title: "Укажите название", variant: "destructive" }); return; }
     setSaving(true);
     const payload = { ...form, specs: parseSpecs(specsText) };
-    console.log("[SAVE] description length:", payload.description?.length, "value:", payload.description?.slice(0, 300));
     const url = editId ? `${PRODUCTS_API}?action=update&id=${editId}` : `${PRODUCTS_API}?action=create`;
     await fetch(url, {
       method: editId ? "PUT" : "POST",

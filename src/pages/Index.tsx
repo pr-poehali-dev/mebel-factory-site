@@ -21,7 +21,7 @@ interface Product {
   old_price: number | null;
   angle_type: string;
   fabric: string[];
-  specs: Record<string, string>;
+  specs: { label: string; value: string }[];
   colors: ColorVariant[];
   images: string[];
   sku: string;
@@ -91,8 +91,8 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, []);
 
-  const specsList = product.specs && typeof product.specs === 'object'
-    ? Object.entries(product.specs as Record<string, string>).map(([label, value]) => ({ label, value }))
+  const specsList: { label: string; value: string }[] = Array.isArray(product.specs)
+    ? product.specs as { label: string; value: string }[]
     : [];
 
   const swatchUrl = (c: ColorVariant) => c.icon || c.photos?.[0] || '';

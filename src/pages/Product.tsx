@@ -31,7 +31,7 @@ interface Product {
   angle_type: string;
   fabric: string[];
   description: string;
-  specs: Record<string, string>;
+  specs: { label: string; value: string }[];
   colors: ColorVariant[];
   images: string[];
   is_active: boolean;
@@ -98,7 +98,7 @@ export default function Product() {
 
   const colors = Array.isArray(product.colors) ? product.colors : [];
 
-  const specs = product.specs && typeof product.specs === 'object' ? product.specs : {};
+  const specs: { label: string; value: string }[] = Array.isArray(product.specs) ? product.specs : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -239,15 +239,15 @@ export default function Product() {
         </div>
 
         {/* Характеристики */}
-        {Object.keys(specs).length > 0 && (
+        {specs.length > 0 && (
           <div className="mt-16">
             <p className="text-gold text-xs tracking-mega uppercase mb-6">Технические данные</p>
             <h2 className="font-display text-3xl mb-8">Характеристики</h2>
             <div className="grid md:grid-cols-2 gap-0 border border-border rounded-sm overflow-hidden">
-              {Object.entries(specs).map(([key, val], i) => (
+              {specs.map((s, i) => (
                 <div key={i} className={`flex justify-between px-5 py-3.5 text-sm border-b border-border/60 ${i % 2 === 0 ? 'bg-card/30' : ''}`}>
-                  <span className="text-muted-foreground">{key}</span>
-                  <span className="font-medium text-right max-w-[60%]">{val}</span>
+                  <span className="text-muted-foreground">{s.label}</span>
+                  <span className="font-medium text-right max-w-[60%]">{s.value}</span>
                 </div>
               ))}
             </div>
