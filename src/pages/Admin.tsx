@@ -107,8 +107,9 @@ export default function Admin() {
 
   useEffect(() => { if (token) loadProducts(); }, [token]);
 
-  async function compressImage(file: File): Promise<Blob> {
-    const LIMIT = 1_500_000; // ~1.5MB, с запасом под лимит прокси
+  // Сжимает изображение и возвращает base64 (без префикса data:)
+  async function compressImage(file: File): Promise<string> {
+    const LIMIT = 700_000; // итоговый base64 < 700KB — гарантированно влезает в лимит прокси
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -116,34 +117,31 @@ export default function Admin() {
       img.onload = () => {
         URL.revokeObjectURL(url);
 
-        const render = (maxSize: number, quality: number): Promise<Blob> =>
-          new Promise(res => {
-            let w = img.width, h = img.height;
-            if (w > maxSize || h > maxSize) {
-              if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
-              else { w = Math.round(w * maxSize / h); h = maxSize; }
-            }
-            const canvas = document.createElement("canvas");
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext("2d")!;
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            canvas.toBlob(b => res(b!), "image/jpeg", quality);
-          });
-
-        (async () => {
-          let maxSize = 1200;
-          let quality = 0.8;
-          let blob = await render(maxSize, quality);
-          // ужимаем пока не влезет в лимит
-          while (blob.size > LIMIT && (quality > 0.4 || maxSize > 600)) {
-            if (quality > 0.4) quality -= 0.1;
-            else { maxSize = Math.round(maxSize * 0.8); quality = 0.7; }
-            blob = await render(maxSize, quality);
+        const render = (maxSize: number, quality: number): string => {
+          let w = img.width, h = img.height;
+          if (w > maxSize || h > maxSize) {
+            if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+            else { w = Math.round(w * maxSize / h); h = maxSize; }
           }
-          resolve(blob);
-        })();
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext("2d")!;
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          return canvas.toDataURL("image/jpeg", quality);
+        };
+
+        let maxSize = 1400;
+        let quality = 0.85;
+        let dataUrl = render(maxSize, quality);
+        // length строки base64 ~= размеру передаваемых данных
+        while (dataUrl.length > LIMIT && (quality > 0.35 || maxSize > 500)) {
+          if (quality > 0.35) quality -= 0.08;
+          else { maxSize = Math.round(maxSize * 0.85); quality = 0.7; }
+          dataUrl = render(maxSize, quality);
+        }
+        resolve(dataUrl.split(",", 2)[1] || "");
       };
       img.src = url;
     });
@@ -152,24 +150,22 @@ export default function Admin() {
   async function uploadFile(file: File, hint: string): Promise<string> {
     setUploading(hint);
     try {
-      let blob: Blob;
+      let base64: string;
       try {
-        blob = await compressImage(file);
+        base64 = await compressImage(file);
       } catch {
         toast({ title: "Не удалось обработать это изображение. Попробуйте JPG или PNG.", variant: "destructive" });
         return "";
       }
-      if (blob.size > 3_000_000) {
-        toast({ title: `Файл слишком большой (${Math.round(blob.size / 1024)} КБ). Выберите другое фото.`, variant: "destructive" });
+      if (!base64) {
+        toast({ title: "Пустое изображение. Выберите другое фото.", variant: "destructive" });
         return "";
       }
       const currentToken = sessionStorage.getItem("admin_token") || token;
-      const formData = new FormData();
-      formData.append("file", blob, file.name);
-      formData.append("token", currentToken);
       const res = await fetch(UPLOAD_API, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ file: base64, name: file.name, content_type: "image/jpeg", token: currentToken }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) {
