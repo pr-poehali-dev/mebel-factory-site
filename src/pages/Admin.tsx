@@ -108,21 +108,42 @@ export default function Admin() {
   useEffect(() => { if (token) loadProducts(); }, [token]);
 
   async function compressImage(file: File): Promise<Blob> {
-    return new Promise(resolve => {
+    const LIMIT = 1_500_000; // ~1.5MB, с запасом под лимит прокси
+    return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Не удалось прочитать изображение")); };
       img.onload = () => {
-        const MAX = 1200;
-        let w = img.width, h = img.height;
-        if (w > MAX || h > MAX) {
-          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-          else { w = Math.round(w * MAX / h); h = MAX; }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
         URL.revokeObjectURL(url);
-        canvas.toBlob(blob => resolve(blob!), "image/jpeg", 0.82);
+
+        const render = (maxSize: number, quality: number): Promise<Blob> =>
+          new Promise(res => {
+            let w = img.width, h = img.height;
+            if (w > maxSize || h > maxSize) {
+              if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+              else { w = Math.round(w * maxSize / h); h = maxSize; }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext("2d")!;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            canvas.toBlob(b => res(b!), "image/jpeg", quality);
+          });
+
+        (async () => {
+          let maxSize = 1200;
+          let quality = 0.8;
+          let blob = await render(maxSize, quality);
+          // ужимаем пока не влезет в лимит
+          while (blob.size > LIMIT && (quality > 0.4 || maxSize > 600)) {
+            if (quality > 0.4) quality -= 0.1;
+            else { maxSize = Math.round(maxSize * 0.8); quality = 0.7; }
+            blob = await render(maxSize, quality);
+          }
+          resolve(blob);
+        })();
       };
       img.src = url;
     });
@@ -131,7 +152,17 @@ export default function Admin() {
   async function uploadFile(file: File, hint: string): Promise<string> {
     setUploading(hint);
     try {
-      const blob = await compressImage(file);
+      let blob: Blob;
+      try {
+        blob = await compressImage(file);
+      } catch {
+        toast({ title: "Не удалось обработать это изображение. Попробуйте JPG или PNG.", variant: "destructive" });
+        return "";
+      }
+      if (blob.size > 3_000_000) {
+        toast({ title: `Файл слишком большой (${Math.round(blob.size / 1024)} КБ). Выберите другое фото.`, variant: "destructive" });
+        return "";
+      }
       const currentToken = sessionStorage.getItem("admin_token") || token;
       const formData = new FormData();
       formData.append("file", blob, file.name);
