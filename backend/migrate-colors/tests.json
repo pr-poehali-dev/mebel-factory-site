@@ -1,0 +1,13 @@
+{
+  "tests": [
+    {
+      "name": "Run migration",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 200,
+      "expectedBody": {"updated": "number"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

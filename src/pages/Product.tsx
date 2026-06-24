@@ -96,9 +96,7 @@ export default function Product() {
     );
   }
 
-  const colors = Array.isArray(product.colors)
-    ? product.colors.map(c => typeof c === 'string' ? { name: c, sku: '', icon: '', photos: [] } : c)
-    : [];
+  const colors = Array.isArray(product.colors) ? product.colors : [];
 
   const specs = product.specs && typeof product.specs === 'object' ? product.specs : {};
 

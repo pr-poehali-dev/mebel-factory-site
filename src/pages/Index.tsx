@@ -6,10 +6,8 @@ const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702"
 interface ColorVariant {
   name: string;
   sku: string;
-  icon?: string;
-  swatch?: string;
-  photos?: string[];
-  images?: string[];
+  icon: string;
+  photos: string[];
 }
 
 interface Product {
@@ -48,69 +46,18 @@ const CATEGORY_LABEL: Record<string, string> = {
   fabric: 'Ткань',
 };
 
-function pyToJson(s: string): unknown {
-  try {
-    return JSON.parse(
-      s.replace(/'/g, '"').replace(/None/g, 'null').replace(/True/g, 'true').replace(/False/g, 'false')
-    );
-  } catch { return null; }
-}
-
-// Парсит строку Python-формата в массив объектов
-function parseColors(raw: unknown): ColorVariant[] {
-  let data = raw;
-
-  // Вариант 1: массив с одной строкой — весь питон-массив как строка
-  if (Array.isArray(data) && data.length === 1 && typeof data[0] === 'string') {
-    const parsed = pyToJson(data[0] as string);
-    if (Array.isArray(parsed)) data = parsed;
-    else return [];
-  }
-
-  // Вариант 2: массив объектов, но у одного из них поле name содержит питон-строку с массивом
-  if (Array.isArray(data) && data.length === 1 && typeof (data[0] as ColorVariant)?.name === 'string') {
-    const nameVal = (data[0] as ColorVariant).name;
-    if (nameVal.trim().startsWith('[')) {
-      const parsed = pyToJson(nameVal);
-      if (Array.isArray(parsed)) data = parsed;
-    }
-  }
-
-  if (!Array.isArray(data)) return [];
-  return (data as ColorVariant[]).map(c =>
-    typeof c === 'string' ? { name: c, sku: '' } : c
-  );
-}
-
-function parseImages(raw: unknown): string[] {
-  if (Array.isArray(raw) && raw.length === 1 && typeof raw[0] === 'string') {
-    try {
-      const fixed = (raw[0] as string).replace(/'/g, '"');
-      const parsed = JSON.parse(fixed);
-      if (Array.isArray(parsed)) return parsed;
-    } catch { /**/ }
-  }
-  if (Array.isArray(raw)) return raw as string[];
-  return [];
-}
-
 function ProductModal({ product, onClose }: { product: Product; onClose: () => void }) {
-  const colors = parseColors(product.colors);
-  const generalImages = parseImages(product.images);
+  const colors: ColorVariant[] = Array.isArray(product.colors) ? product.colors : [];
 
   const [selectedColor, setSelectedColor] = useState(0);
 
-  const colorPhotos = useMemo(() => {
-    const c = colors[selectedColor];
-    if (!c) return [];
-    return c.images?.length ? c.images : c.photos?.length ? c.photos : [];
-  }, [selectedColor, colors]);
-
   const allPhotos = useMemo(() => {
+    const c = colors[selectedColor];
+    const colorPhotos = c?.photos?.length ? c.photos : [];
     if (colorPhotos.length) return colorPhotos;
-    const imgs = generalImages;
+    const imgs = Array.isArray(product.images) ? product.images : [];
     return product.img ? [product.img, ...imgs.filter(i => i !== product.img)] : imgs;
-  }, [colorPhotos, generalImages, product.img]);
+  }, [selectedColor, colors, product.img, product.images]);
 
   const [activePhoto, setActivePhoto] = useState(() => allPhotos[0] || product.img || '');
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -144,30 +91,11 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
   }, []);
 
-  // specs приходит как объект где ключ — начало Python-строки, значение — продолжение
-  // Например: {"[{'label'": "'Размер...', ...}]"}
-  const specsList: { label: string; value: string }[] = (() => {
-    const raw = product.specs;
-    if (!raw) return [];
-    if (Array.isArray(raw)) return raw as { label: string; value: string }[];
-    if (typeof raw === 'object') {
-      // Склеиваем все ключи и значения в одну строку и парсим
-      const entries = Object.entries(raw as Record<string, string>);
-      try {
-        const fullStr = entries.map(([k, v]) => k + ': ' + v).join(', ');
-        const fixed = fullStr
-          .replace(/'/g, '"')
-          .replace(/None/g, 'null')
-          .replace(/True/g, 'true')
-          .replace(/False/g, 'false');
-        const parsed = JSON.parse(fixed);
-        if (Array.isArray(parsed)) return parsed as { label: string; value: string }[];
-      } catch { /**/ }
-    }
-    return [];
-  })();
+  const specsList = product.specs && typeof product.specs === 'object'
+    ? Object.entries(product.specs as Record<string, string>).map(([label, value]) => ({ label, value }))
+    : [];
 
-  const swatchUrl = (c: ColorVariant) => c.swatch || c.icon || c.images?.[0] || c.photos?.[0] || '';
+  const swatchUrl = (c: ColorVariant) => c.icon || c.photos?.[0] || '';
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
