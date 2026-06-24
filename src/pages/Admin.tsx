@@ -162,6 +162,8 @@ export default function Admin() {
         return "";
       }
       const currentToken = sessionStorage.getItem("admin_token") || token;
+      const payloadKB = Math.round(base64.length / 1024);
+      console.log(`[upload v2] отправляю JSON, размер base64 ≈ ${payloadKB} КБ`);
       const res = await fetch(UPLOAD_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
