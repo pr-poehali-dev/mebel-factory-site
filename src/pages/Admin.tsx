@@ -456,8 +456,8 @@ export default function Admin() {
         {filtered.length > 0 && <p className="text-sm text-gray-400">Всего товаров: {filtered.length}</p>}
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open && !saving) setDialogOpen(false); }}>
+        <DialogContent key={editId ?? "new"} className="max-w-2xl max-h-[90vh] overflow-y-auto" onInteractOutside={e => e.preventDefault()} onEscapeKeyDown={e => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>{editId ? "Редактировать товар" : "Добавить товар"}</DialogTitle>
           </DialogHeader>
