@@ -95,7 +95,6 @@ def handler(event: dict, context) -> dict:
         if not verify_admin():
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
         desc = body.get('description')
-        print(f"[CREATE] description len={len(desc) if desc else 0}, value={repr(desc[:200]) if desc else None}")
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("""
@@ -124,7 +123,6 @@ def handler(event: dict, context) -> dict:
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
         product_id = params.get('id')
         desc = body.get('description')
-        print(f"[UPDATE] id={product_id}, description len={len(desc) if desc else 0}, value={repr(desc[:200]) if desc else None}")
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("""

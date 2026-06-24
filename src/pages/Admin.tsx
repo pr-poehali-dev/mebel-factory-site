@@ -221,6 +221,7 @@ export default function Admin() {
     if (!form.name.trim()) { toast({ title: "Укажите название", variant: "destructive" }); return; }
     setSaving(true);
     const payload = { ...form, specs: parseSpecs(specsText) };
+    console.log("[SAVE] description length:", payload.description?.length, "value:", payload.description?.slice(0, 300));
     const url = editId ? `${PRODUCTS_API}?action=update&id=${editId}` : `${PRODUCTS_API}?action=create`;
     await fetch(url, {
       method: editId ? "PUT" : "POST",
@@ -448,13 +449,13 @@ export default function Admin() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 flex flex-col gap-1">
                 <Label>Название *</Label>
-                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Диван Эссен левый" />
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Диван Эссен левый" />
               </div>
               <div className="flex flex-col gap-1">
                 <Label>Категория</Label>
                 <select
                   value={form.category}
-                  onChange={e => setForm({ ...form, category: e.target.value })}
+                  onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <option value="">— выберите —</option>
@@ -465,7 +466,7 @@ export default function Admin() {
                 <Label>Тип угла</Label>
                 <select
                   value={form.angle_type}
-                  onChange={e => setForm({ ...form, angle_type: e.target.value })}
+                  onChange={e => setForm(f => ({ ...f, angle_type: e.target.value }))}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {ANGLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -473,11 +474,11 @@ export default function Admin() {
               </div>
               <div className="flex flex-col gap-1">
                 <Label>Цена (₽) *</Label>
-                <Input type="number" value={form.price ?? ""} onChange={e => setForm({ ...form, price: e.target.value ? +e.target.value : null })} placeholder="34999" />
+                <Input type="number" value={form.price ?? ""} onChange={e => setForm(f => ({ ...f, price: e.target.value ? +e.target.value : null }))} placeholder="34999" />
               </div>
               <div className="flex flex-col gap-1">
                 <Label>Старая цена (₽)</Label>
-                <Input type="number" value={form.old_price ?? ""} onChange={e => setForm({ ...form, old_price: e.target.value ? +e.target.value : null })} placeholder="44999" />
+                <Input type="number" value={form.old_price ?? ""} onChange={e => setForm(f => ({ ...f, old_price: e.target.value ? +e.target.value : null }))} placeholder="44999" />
               </div>
             </div>
 
@@ -485,7 +486,7 @@ export default function Admin() {
             <div className="flex flex-col gap-2">
               <Label>Главное фото</Label>
               <div className="flex gap-2">
-                <Input value={form.img} onChange={e => setForm({ ...form, img: e.target.value })} placeholder="https://..." className="flex-1" />
+                <Input value={form.img} onChange={e => setForm(f => ({ ...f, img: e.target.value }))} placeholder="https://..." className="flex-1" />
                 <Button variant="outline" size="sm" className="gap-1" onClick={() => mainPhotoRef.current?.click()}>
                   <Icon name="Upload" size={14} />Загрузить
                 </Button>
@@ -498,7 +499,7 @@ export default function Admin() {
             {/* Тег */}
             <div className="flex flex-col gap-1">
               <Label>Тег</Label>
-              <Input value={form.tag} onChange={e => setForm({ ...form, tag: e.target.value })} placeholder="Акция, Новинка..." />
+              <Input value={form.tag} onChange={e => setForm(f => ({ ...f, tag: e.target.value }))} placeholder="Акция, Новинка..." />
             </div>
 
             {/* Тип угла уже выше, обивка */}
@@ -523,7 +524,7 @@ export default function Admin() {
             {/* Описание */}
             <div className="flex flex-col gap-1">
               <Label>Описание</Label>
-              <Textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={4} placeholder="Описание товара..." />
+              <Textarea value={form.description} onChange={e => { const v = e.target.value; setForm(f => ({ ...f, description: v })); }} rows={6} placeholder="Описание товара..." />
             </div>
 
             {/* Характеристики */}
@@ -614,7 +615,7 @@ export default function Admin() {
               </div>
               <Textarea
                 value={form.images.join("\n")}
-                onChange={e => setForm({ ...form, images: e.target.value.split("\n").map(s => s.trim()).filter(Boolean) })}
+                onChange={e => { const v = e.target.value; setForm(f => ({ ...f, images: v.split("\n").map(s => s.trim()).filter(Boolean) })); }}
                 rows={3} placeholder={"https://...\nhttps://..."}
               />
               {form.images.length > 0 && (
@@ -633,7 +634,7 @@ export default function Admin() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Switch checked={form.is_active} onCheckedChange={v => setForm({ ...form, is_active: v })} />
+              <Switch checked={form.is_active} onCheckedChange={v => setForm(f => ({ ...f, is_active: v }))} />
               <Label>Показывать на сайте</Label>
             </div>
           </div>
