@@ -217,17 +217,31 @@ export default function Admin() {
   async function save() {
     if (!form.name.trim()) { toast({ title: "Укажите название", variant: "destructive" }); return; }
     setSaving(true);
-    const payload = { ...form, specs: parseSpecs(specsText) };
-    const url = editId ? `${PRODUCTS_API}?action=update&id=${editId}` : `${PRODUCTS_API}?action=create`;
-    await fetch(url, {
-      method: editId ? "PUT" : "POST",
-      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
-      body: JSON.stringify(payload),
-    });
-    setSaving(false);
-    setDialogOpen(false);
-    toast({ title: editId ? "Товар обновлён" : "Товар добавлен" });
-    loadProducts();
+    try {
+      const payload = { ...form, specs: parseSpecs(specsText) };
+      const bodyStr = JSON.stringify(payload);
+      console.log("[SAVE] body size:", bodyStr.length, "description:", payload.description?.length, "specs:", payload.specs?.length);
+      const url = editId ? `${PRODUCTS_API}?action=update&id=${editId}` : `${PRODUCTS_API}?action=create`;
+      const res = await fetch(url, {
+        method: editId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+        body: bodyStr,
+      });
+      const data = await res.json();
+      console.log("[SAVE] response:", res.status, data);
+      if (!res.ok) {
+        toast({ title: "Ошибка сохранения: " + (data.error || res.status), variant: "destructive" });
+        return;
+      }
+      setDialogOpen(false);
+      toast({ title: editId ? "Товар обновлён" : "Товар добавлен" });
+      loadProducts();
+    } catch (e) {
+      console.error("[SAVE] error:", e);
+      toast({ title: "Ошибка: " + String(e), variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function del(id: number, name: string) {
