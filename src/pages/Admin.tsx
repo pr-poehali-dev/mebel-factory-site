@@ -52,6 +52,7 @@ interface Product {
   is_active: boolean;
   created_at: string;
   sku: string;
+  sort_order: number | null;
 }
 
 const emptyColor = (): ColorVariant => ({ name: "", sku: "", icon: "", photos: [] });
@@ -60,7 +61,7 @@ const emptyForm = (): Omit<Product, "id" | "created_at"> => ({
   name: "", category: "", price: null, old_price: null,
   img: "", tag: "", angle_type: "", fabric: [],
   description: "", specs: [], colors: [], images: [],
-  is_active: true, sku: "",
+  is_active: true, sku: "", sort_order: null,
 });
 
 export default function Admin() {
@@ -209,7 +210,7 @@ export default function Admin() {
         ? p.colors.map(c => typeof c === "string" ? { name: c, sku: "", icon: "", photos: [] } : c)
         : [],
       images: p.images || [],
-      is_active: p.is_active, sku: p.sku,
+      is_active: p.is_active, sku: p.sku, sort_order: p.sort_order,
     });
     setSpecsText(specsStr);
     setDialogOpen(true);
@@ -266,6 +267,19 @@ export default function Admin() {
     });
     toast({ title: "Удалено" });
     loadProducts();
+  }
+
+  async function moveProduct(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= products.length) return;
+    const reordered = [...products];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setProducts(reordered);
+    await fetch(`${PRODUCTS_API}?action=reorder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": token },
+      body: JSON.stringify({ ids: reordered.map(p => p.id) }),
+    });
   }
 
   async function toggleActive(p: Product) {
@@ -402,6 +416,7 @@ export default function Admin() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b">
+                  <th className="text-left px-4 py-3 font-medium text-gray-500 w-16"></th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500 w-16">Фото</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Название</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-500">Категория</th>
@@ -412,10 +427,32 @@ export default function Admin() {
               </thead>
               <tbody>
                 {filtered.length === 0 && (
-                  <tr><td colSpan={6} className="text-center py-16 text-gray-400">Товары не найдены</td></tr>
+                  <tr><td colSpan={7} className="text-center py-16 text-gray-400">Товары не найдены</td></tr>
                 )}
-                {filtered.map(p => (
+                {filtered.map(p => {
+                  const realIndex = products.findIndex(x => x.id === p.id);
+                  return (
                   <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
+                    <td className="px-2 py-3">
+                      <div className="flex flex-col">
+                        <button
+                          onClick={() => moveProduct(realIndex, -1)}
+                          disabled={realIndex === 0 || search.trim() !== ""}
+                          title={search.trim() !== "" ? "Очистите поиск, чтобы менять порядок" : "Переместить выше"}
+                          className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+                        >
+                          <Icon name="ChevronUp" size={16} />
+                        </button>
+                        <button
+                          onClick={() => moveProduct(realIndex, 1)}
+                          disabled={realIndex === products.length - 1 || search.trim() !== ""}
+                          title={search.trim() !== "" ? "Очистите поиск, чтобы менять порядок" : "Переместить ниже"}
+                          className="p-0.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:hover:bg-transparent transition-colors"
+                        >
+                          <Icon name="ChevronDown" size={16} />
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       {p.img
                         ? <img src={p.img} alt={p.name} className="w-12 h-10 object-cover rounded-lg bg-gray-100" />
@@ -448,7 +485,8 @@ export default function Admin() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

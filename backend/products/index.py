@@ -37,11 +37,12 @@ def row_to_dict(r):
         'fabric': safe_json(r[8]), 'description': r[9], 'specs': safe_json(r[10]),
         'colors': safe_json(r[11]), 'images': safe_json(r[12]),
         'is_active': r[13], 'created_at': str(r[14]), 'sku': r[15],
+        'sort_order': r[16],
     }
 
 SELECT_SQL = """
     SELECT id, name, category, price, old_price, img, tag, angle_type,
-           fabric, description, specs, colors, images, is_active, created_at, sku
+           fabric, description, specs, colors, images, is_active, created_at, sku, sort_order
     FROM products
 """
 
@@ -74,7 +75,7 @@ def handler(event: dict, context) -> dict:
     if method == 'GET' and not action:
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(SELECT_SQL + " WHERE is_active = true ORDER BY created_at DESC")
+        cur.execute(SELECT_SQL + " WHERE is_active = true ORDER BY sort_order ASC NULLS LAST, created_at DESC")
         rows = cur.fetchall()
         conn.close()
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'products': [row_to_dict(r) for r in rows]}, ensure_ascii=False)}
@@ -85,7 +86,7 @@ def handler(event: dict, context) -> dict:
             return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute(SELECT_SQL + " ORDER BY created_at DESC")
+        cur.execute(SELECT_SQL + " ORDER BY sort_order ASC NULLS LAST, created_at DESC")
         rows = cur.fetchall()
         conn.close()
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'products': [row_to_dict(r) for r in rows]}, ensure_ascii=False)}
@@ -97,10 +98,12 @@ def handler(event: dict, context) -> dict:
         desc = body.get('description')
         conn = get_conn()
         cur = conn.cursor()
+        cur.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM products")
+        next_order = cur.fetchone()[0]
         cur.execute("""
             INSERT INTO products (name, category, price, old_price, img, tag, angle_type,
-                fabric, description, specs, colors, images, is_active, sku)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+                fabric, description, specs, colors, images, is_active, sku, sort_order)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
         """, (
             body.get('name'), body.get('category'),
             body.get('price') or None, body.get('old_price') or None,
@@ -110,7 +113,7 @@ def handler(event: dict, context) -> dict:
             json.dumps(body.get('specs', []), ensure_ascii=False),
             json.dumps(body.get('colors', []), ensure_ascii=False),
             json.dumps(body.get('images', []), ensure_ascii=False),
-            body.get('is_active', True), body.get('sku'),
+            body.get('is_active', True), body.get('sku'), next_order,
         ))
         new_id = cur.fetchone()[0]
         conn.commit()
@@ -141,6 +144,19 @@ def handler(event: dict, context) -> dict:
             json.dumps(body.get('images', []), ensure_ascii=False),
             body.get('is_active', True), body.get('sku'), product_id,
         ))
+        conn.commit()
+        conn.close()
+        return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'success': True})}
+
+    # POST reorder — сохранить новый порядок товаров
+    if method == 'POST' and action == 'reorder':
+        if not verify_admin():
+            return {'statusCode': 401, 'headers': CORS, 'body': json.dumps({'error': 'Unauthorized'})}
+        ids = body.get('ids', [])
+        conn = get_conn()
+        cur = conn.cursor()
+        for idx, pid in enumerate(ids):
+            cur.execute("UPDATE products SET sort_order=%s WHERE id=%s", (idx, pid))
         conn.commit()
         conn.close()
         return {'statusCode': 200, 'headers': CORS, 'body': json.dumps({'success': True})}
