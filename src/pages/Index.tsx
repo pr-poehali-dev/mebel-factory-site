@@ -1,6 +1,31 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
+
+function copyToClipboard(text: string, successMsg: string) {
+  const fallback = () => {
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      toast.success(successMsg);
+    } catch {
+      toast.error('Не удалось скопировать. Скопируйте ссылку из адресной строки браузера.');
+    }
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => toast.success(successMsg)).catch(fallback);
+  } else {
+    fallback();
+  }
+}
 
 const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
 
@@ -100,9 +125,7 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
 
   function shareProduct() {
     const url = `${window.location.origin}/product/${product.id}`;
-    navigator.clipboard.writeText(url)
-      .then(() => toast.success('Ссылка на товар скопирована'))
-      .catch(() => toast.error('Не удалось скопировать ссылку'));
+    copyToClipboard(url, 'Ссылка на товар скопирована');
   }
 
   return (
@@ -240,6 +263,8 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
 }
 
 const Index = () => {
+  const { id: routeId } = useParams();
+  const navigate = useNavigate();
   const [active, setActive] = useState('all');
   const [search, setSearch] = useState('');
   const [angleFilter, setAngleFilter] = useState('');
@@ -254,6 +279,22 @@ const Index = () => {
       .then(d => setProducts(d.products || []))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!routeId || products.length === 0) return;
+    const found = products.find(p => String(p.id) === String(routeId));
+    setSelectedProduct(found || null);
+  }, [routeId, products]);
+
+  function openProduct(p: Product) {
+    setSelectedProduct(p);
+    navigate(`/product/${p.id}`);
+  }
+
+  function closeProduct() {
+    setSelectedProduct(null);
+    navigate('/');
+  }
 
   const filtered = useMemo(() => {
     let result = active === 'all' ? products : products.filter((p) => p.category === active);
@@ -392,7 +433,7 @@ const Index = () => {
               {filtered.map((p, i) => (
                 <article
                   key={p.id}
-                  onClick={() => setSelectedProduct(p)}
+                  onClick={() => openProduct(p)}
                   className="group animate-fade-in cursor-pointer"
                   style={{ animationDelay: `${i * 0.06}s` }}
                 >
@@ -508,7 +549,7 @@ const Index = () => {
 
       {/* Модальное окно товара */}
       {selectedProduct && (
-        <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+        <ProductModal product={selectedProduct} onClose={closeProduct} />
       )}
     </div>
   );
