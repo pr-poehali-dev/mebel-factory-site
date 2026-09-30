@@ -325,14 +325,16 @@ export default function Admin() {
     const url = await uploadFile(file, `icon-${i}`);
     if (url) updateColor(i, "icon", url);
   }
-  async function uploadColorPhoto(i: number, file: File) {
-    const url = await uploadFile(file, `color-photo-${i}`);
-    if (url) {
-      setForm(f => {
-        const colors = [...f.colors];
-        colors[i] = { ...colors[i], photos: [...colors[i].photos, url] };
-        return { ...f, colors };
-      });
+  async function uploadColorPhotos(i: number, files: FileList) {
+    for (const file of Array.from(files)) {
+      const url = await uploadFile(file, `color-photo-${i}`);
+      if (url) {
+        setForm(f => {
+          const colors = [...f.colors];
+          colors[i] = { ...colors[i], photos: [...colors[i].photos, url] };
+          return { ...f, colors };
+        });
+      }
     }
   }
   function removeColorPhoto(ci: number, pi: number) {
@@ -343,9 +345,11 @@ export default function Admin() {
     });
   }
 
-  async function uploadGeneralPhoto(file: File) {
-    const url = await uploadFile(file, "general");
-    if (url) setForm(f => ({ ...f, images: [...f.images, url] }));
+  async function uploadGeneralPhotos(files: FileList) {
+    for (const file of Array.from(files)) {
+      const url = await uploadFile(file, "general");
+      if (url) setForm(f => ({ ...f, images: [...f.images, url] }));
+    }
   }
   function removeGeneralPhoto(i: number) {
     setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
@@ -642,8 +646,8 @@ export default function Admin() {
                         <Button variant="outline" size="sm" className="gap-1 pointer-events-none h-7 text-xs bg-white" asChild>
                           <span><Icon name="Upload" size={12} />Загрузить фото</span>
                         </Button>
-                        <input type="file" accept="image/*" className="hidden"
-                          onChange={e => { const f = e.target.files?.[0]; if (f) uploadColorPhoto(i, f); e.target.value = ""; }} />
+                        <input type="file" accept="image/*" multiple className="hidden"
+                          onChange={e => { const fs = e.target.files; if (fs && fs.length) uploadColorPhotos(i, fs); e.target.value = ""; }} />
                       </label>
                     </div>
                     {color.photos.length > 0 && (
@@ -672,8 +676,8 @@ export default function Admin() {
                   <Button variant="outline" size="sm" className="gap-1 pointer-events-none" asChild>
                     <span><Icon name="Upload" size={14} />Загрузить фото</span>
                   </Button>
-                  <input type="file" accept="image/*" className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadGeneralPhoto(f); e.target.value = ""; }} />
+                  <input type="file" accept="image/*" multiple className="hidden"
+                    onChange={e => { const fs = e.target.files; if (fs && fs.length) uploadGeneralPhotos(fs); e.target.value = ""; }} />
                 </label>
               </div>
               <Textarea

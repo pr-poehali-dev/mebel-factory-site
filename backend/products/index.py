@@ -98,7 +98,7 @@ def handler(event: dict, context) -> dict:
         desc = body.get('description')
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM products")
+        cur.execute("SELECT COALESCE(MIN(sort_order), 0) - 1 FROM products")
         next_order = cur.fetchone()[0]
         cur.execute("""
             INSERT INTO products (name, category, price, old_price, img, tag, angle_type,
