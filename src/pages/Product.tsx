@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import { toast } from 'sonner';
 
 const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
 
@@ -100,6 +101,13 @@ export default function Product() {
 
   const specs: { label: string; value: string }[] = Array.isArray(product.specs) ? product.specs : [];
 
+  function shareProduct() {
+    const url = `${window.location.origin}/product/${id}`;
+    navigator.clipboard.writeText(url)
+      .then(() => toast.success('Ссылка на товар скопирована'))
+      .catch(() => toast.error('Не удалось скопировать ссылку'));
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* Шапка */}
@@ -124,10 +132,19 @@ export default function Product() {
 
       <div className="container pt-28 pb-20">
         {/* Хлебные крошки */}
-        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-8">
-          <button onClick={() => navigate('/')} className="hover:text-gold transition-colors">Каталог</button>
-          <span>/</span>
-          <span className="text-foreground">{product.name}</span>
+        <div className="flex items-center justify-between gap-2 mb-8">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <button onClick={() => navigate('/')} className="hover:text-gold transition-colors">Каталог</button>
+            <span>/</span>
+            <span className="text-foreground">{product.name}</span>
+          </div>
+          <button
+            onClick={shareProduct}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-gold transition-colors border border-border/60 rounded-full px-3 py-1.5"
+          >
+            <Icon name="Share2" size={13} />
+            Поделиться
+          </button>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 items-start">

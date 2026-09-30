@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
+import { toast } from 'sonner';
 
 const API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
 
@@ -97,10 +98,24 @@ function ProductModal({ product, onClose }: { product: Product; onClose: () => v
 
   const swatchUrl = (c: ColorVariant) => c.icon || c.photos?.[0] || '';
 
+  function shareProduct() {
+    const url = `${window.location.origin}/product/${product.id}`;
+    navigator.clipboard.writeText(url)
+      .then(() => toast.success('Ссылка на товар скопирована'))
+      .catch(() => toast.error('Не удалось скопировать ссылку'));
+  }
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 md:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[96vh] overflow-hidden flex flex-col">
+        <button
+          onClick={shareProduct}
+          title="Скопировать ссылку на товар"
+          className="absolute top-4 right-14 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <Icon name="Share2" size={15} className="text-gray-600" />
+        </button>
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors shadow-sm"
