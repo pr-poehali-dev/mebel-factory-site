@@ -13,7 +13,7 @@ import Icon from "@/components/ui/icon";
 const PRODUCTS_API = "https://functions.poehali.dev/1de099ca-e246-4fde-a95d-707c71ea4702";
 const UPLOAD_API = "https://functions.poehali.dev/5219b3ca-5238-4e07-b920-249a40248742";
 
-const FABRIC_OPTIONS = ["Велюр", "Рогожка", "Экокожа", "Жаккард", "Микровелюр", "Флок", "Шенилл"];
+const FABRIC_OPTIONS = ["Велюр", "Рогожка", "Экокожа", "Жаккард", "Микровелюр", "Флок", "Шенилл", "Букле"];
 const CATEGORY_OPTIONS = [
   { value: "sofa", label: "Диван" },
   { value: "armchair", label: "Кресло" },

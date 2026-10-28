@@ -410,7 +410,7 @@ const Index = () => {
               >{o.l}</button>
             ))}
             <span className="text-xs text-muted-foreground tracking-widest uppercase ml-3">Ткань:</span>
-            {[{ v: '', l: 'Все' }, { v: 'Велюр', l: 'Велюр' }, { v: 'Рогожка', l: 'Рогожка' }].map(o => (
+            {[{ v: '', l: 'Все' }, { v: 'Велюр', l: 'Велюр' }, { v: 'Рогожка', l: 'Рогожка' }, { v: 'Букле', l: 'Букле' }].map(o => (
               <button
                 key={o.v}
                 onClick={() => setFabricFilter(o.v)}
